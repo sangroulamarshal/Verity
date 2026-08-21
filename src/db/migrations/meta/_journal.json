@@ -15,6 +15,13 @@
       "when": 1787294275531,
       "tag": "0001_transactions",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787303052107,
+      "tag": "0002_new_rumiko_fujikawa",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,7 @@ import { users } from "./users";
 import { sessions } from "./sessions";
 import { auditLogs } from "./audit-logs";
 import { transactions } from "./transactions";
+import { imports, importMappings } from "./imports";
 
 export const organizationsRelations = relations(organizations, ({ one, many }) => ({
   user: one(users, {
@@ -12,12 +13,32 @@ export const organizationsRelations = relations(organizations, ({ one, many }) =
   }),
   auditLogs: many(auditLogs),
   transactions: many(transactions),
+  imports: many(imports),
 }));
 
 export const transactionsRelations = relations(transactions, ({ one }) => ({
   organization: one(organizations, {
     fields: [transactions.organizationId],
     references: [organizations.id],
+  }),
+}));
+
+export const importsRelations = relations(imports, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [imports.organizationId],
+    references: [organizations.id],
+  }),
+  user: one(users, {
+    fields: [imports.userId],
+    references: [users.id],
+  }),
+  mappings: many(importMappings),
+}));
+
+export const importMappingsRelations = relations(importMappings, ({ one }) => ({
+  import: one(imports, {
+    fields: [importMappings.importId],
+    references: [imports.id],
   }),
 }));
 
@@ -28,6 +49,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
   sessions: many(sessions),
   auditLogs: many(auditLogs),
+  imports: many(imports),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({

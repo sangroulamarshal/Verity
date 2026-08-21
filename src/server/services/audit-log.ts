@@ -9,7 +9,8 @@ export type AuditAction =
   | "LOGOUT"
   | "TRANSACTION_CREATED"
   | "TRANSACTION_UPDATED"
-  | "TRANSACTION_DELETED";
+  | "TRANSACTION_DELETED"
+  | "IMPORT_COMMITTED";
 
 interface RecordAuditLogInput {
   action: AuditAction;

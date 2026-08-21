@@ -9,7 +9,7 @@ import { logoutAction } from "@/features/auth/actions";
  * same authoritative, DB-backed check used everywhere else) rather than
  * trusting cookie presence, so the nav shown always matches reality even
  * if a session was just revoked. Full authenticated nav (customers,
- * imports, risk, cash flow) is added as those routes exist.
+ * risk, cash flow) is added as those routes exist.
  */
 export async function AppHeader() {
   const session = await getOptionalSession();
@@ -32,6 +32,9 @@ export async function AppHeader() {
               </Button>
               <Button asChild variant="ghost" size="sm">
                 <Link href="/transactions">Transactions</Link>
+              </Button>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/imports">Imports</Link>
               </Button>
               <form action={logoutAction}>
                 <Button type="submit" variant="ghost" size="sm">

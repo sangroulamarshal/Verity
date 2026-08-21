@@ -163,6 +163,142 @@ database rows.
   is fully accessible and needs nothing extra. Worth revisiting once
   Phase 5's customer picker needs a searchable list.
 
+## What Phase 4 added
+
+- **Schema**: `imports` (one row per completed import *attempt*, written
+  once at the end of a successful commit — not a scratch/staging table
+  for an in-progress wizard) and `import_mappings` (one row per mapped
+  target field, so "what columns did this import use" is a normal query
+  rather than a jsonb blob to parse). Both were already staged as
+  uncommitted schema work before this phase's feature code was written;
+  see the schema files' own doc comments for the detailed rationale.
+- **New layering, followed strictly**: `server/engines/import-types.ts`,
+  `column-detection.ts`, and `normalization.ts` are pure — no framework
+  imports, no DB access, no HTTP — and take generic
+  `Record<sourceColumn, rawString>[]` rows in, never anything
+  CSV/XLSX-specific. `features/imports/parse.ts` is the one place
+  format-specific libraries (papaparse, SheetJS) are used, and its output
+  has already erased the CSV/XLSX distinction by the time it reaches the
+  engine. This is what makes "the system must not depend on the original
+  source format after normalization" a real, enforced boundary: the risk
+  and cash-flow engines (Phases 6–7) will consume the same
+  `NormalizedTransactionRow` shape regardless of where a transaction
+  came from.
+- **Column mapping model**: each canonical target field (`date`,
+  `amount`, `type`, `category`, `description`, `referenceId`, `currency`)
+  maps from at most one source column. Direction is expressed one of two
+  mutually exclusive ways — a single `amount` + `type` pair, or one/both
+  of `expenseAmount`/`incomeAmount` (the brief's own example: "Withdrawal
+  → expense, Deposit → income") — and `validateColumnMapping` rejects an
+  incomplete or contradictory mapping before any row is processed,
+  rather than guessing per row.
+- **Column detection**: `suggestColumnMapping` is deliberately
+  conservative — exact alias matches only, never fuzzy — since a wrong
+  automatic guess is worse than no guess when the user is about to
+  review it anyway.
+- **Normalization**: dates accept ISO or DD/MM/YYYY (UK convention,
+  matching the app's GBP-first defaults elsewhere) with real calendar
+  validation (rejects e.g. 31 Feb rather than letting it roll over) and
+  the same "not more than one day in the future" / 1900–2200 range rules
+  as manual entry. Amounts strip currency symbols and thousands
+  separators, treat parenthesized values as the accounting negative
+  convention, and are checked against the same `MAX_AMOUNT` sanity
+  ceiling as `features/transactions/schema.ts` — duplicated rather than
+  imported, since engines must not depend on features (see the layering
+  rule above); the two are commented as needing to stay in sync.
+- **Malicious spreadsheet formulas** (explicitly listed as a threat to
+  defend against): `neutralizeFormulaPrefix` prefixes a leading
+  `= + - @ \t \r` with an apostrophe — the same convention Excel itself
+  uses to mark a cell as literal text — applied to every
+  category/description/reference value that came from an uploaded file.
+  Verity doesn't export transactions back out yet, but this is the point
+  where untrusted file content enters the system, so it's neutralized
+  once here rather than left for a future export feature to have to
+  remember. Separately, XLSX cells are read as cached values only —
+  inherent to SheetJS's `xlsx` package, which has no formula-execution
+  engine, not a configuration choice made here.
+- **Duplicate detection has two layers**, both keyed by the same
+  `buildDuplicateKey` (exact reference ID match, else the (date, amount,
+  currency, category) tuple), so a row is judged "the same transaction"
+  by one consistent rule everywhere:
+  - *Within-file*: pure, in `normalizeRows` itself — the first
+    occurrence of a key is kept as valid, later occurrences are flagged
+    as duplicates of it.
+  - *Against history*: `flagExistingDuplicates` in
+    `server/services/imports.ts`, the one part of duplicate detection
+    that needs a database read, narrowed to the batch's own date range
+    plus any referenced IDs rather than scanning the whole
+    organization's history.
+  Per the brief ("do not delete transactions automatically... flag them
+  for review"), flagged rows are excluded from the insert by default; the
+  user can tick "Import these anyway" to include them, but nothing is
+  silently dropped without being counted and shown first. This is
+  deliberately a lighter check than the full Risk Engine's Duplicate
+  Detector coming in Phase 6, which will run against manual entries too
+  — pulling that forward now would be scope creep for an import-time
+  sanity check.
+- **Two Server Actions, no server-side staging between wizard steps**:
+  `analyzeImportAction` serves UPLOAD/DETECT/MAP/PREVIEW/VALIDATE (called
+  once with no mapping to get headers + a suggestion, then again on every
+  mapping tweak for a live preview) and `commitImportAction` serves
+  CONFIRM/NORMALIZE/SAVE. Both re-parse the file and re-run normalization
+  from scratch server-side — nothing the client computed during preview
+  is trusted as the basis for what gets written, consistent with "never
+  trust client-side validation alone." This is also why `imports` has no
+  PENDING/staging row: the browser holds the uploaded `File` in memory
+  across steps and resends it each time, so there's nothing left behind
+  by an abandoned import to clean up.
+- **Atomicity**: `commitImport` wraps the transaction inserts, the
+  `imports` row, and the `import_mappings` rows in one `db.transaction`,
+  so a failure partway through can't leave a partial import with no
+  record explaining it. `sourceRecordId` on each inserted transaction is
+  `{importId}:row-{rowNumber}` — provenance back to the import, but
+  deliberately not derived from any original file internals (row index
+  in the *original* file, sheet name, etc.), keeping the
+  no-source-format-dependency rule intact.
+- **Security**: file size capped at 5 MB and row count at 5,000
+  (`features/imports/parse.ts`) — a resource-exhaustion guard, since an
+  import runs synchronously inside one request with no background job
+  queue in this MVP; only `.csv`/`.xlsx`/`.xls` extensions accepted;
+  `next.config.ts`'s Server Actions body size limit raised from the 1 MB
+  default to 8 MB, comfortably above the app-level cap so that check —
+  which gives a specific, friendly error — is always what's hit first;
+  both import actions are rate-limited per organization+IP, the same
+  `checkRateLimit`/`getClientIp` helpers Phase 2's auth already uses.
+- **Testing**: `server/engines/normalization.test.ts` and
+  `column-detection.test.ts` cover the pure engine directly — date
+  format/range/calendar edge cases, amount parsing (symbols, separators,
+  parentheses, the sanity ceiling), the expense/income split-column
+  logic, formula-prefix neutralization, and both within-file duplicate
+  cases — with no database dependency. `features/imports/parse.test.ts`
+  covers CSV and a real SheetJS-generated XLSX buffer, plus the
+  empty/oversized/too-many-rows/wrong-extension rejections.
+  `features/imports/schema.test.ts` covers the mapping Zod schema. As
+  with Phase 3, the database-dependent parts (existing-duplicate
+  detection against real org data, the atomic commit, cross-organization
+  isolation) need a real Postgres instance to verify end to end and
+  weren't executable from this build sandbox; `e2e/imports.spec.ts`
+  exercises the full upload → map → preview → confirm flow and is
+  written and ready but, like Phase 3's e2e suite, couldn't be run here
+  since the sandbox's network egress doesn't allow downloading
+  Playwright's browser binaries.
+
+## Design system update (post–Phase 3)
+
+The palette was deliberately changed from the original restrained-teal
+direction to a purple family — light mode on a near-white with a
+lavender cast, dark mode on a near-black with a purple undertone — at
+explicit request, overriding the brief's own general "avoid
+purple/blue gradients" guidance for AI-generated design defaults. This
+is a values-only change: every component already read color exclusively
+through the CSS variable tokens in `globals.css` (confirmed by grepping
+for hardcoded hex values elsewhere in `src/` — there were none), so the
+whole app re-themes from that one file with no component changes
+required. Risk-severity and income/expense colors were deliberately left
+untouched, since they're semantic rather than decorative and shouldn't
+become confusable with the brand accent. See `globals.css`'s own comment
+for the specific hex values and reasoning.
+
 ## Reference repos consulted
 
 
