@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { organizations } from "@/db/schema";
@@ -40,11 +41,16 @@ export default async function DashboardPage() {
             works — real dashboard content (financial health, cash flow,
             risk summary, recent transactions) arrives in Phase 8.
           </p>
-          <form action={logoutAction}>
-            <Button type="submit" variant="outline">
-              Log out
+          <div className="flex gap-2">
+            <Button asChild variant="outline">
+              <Link href="/transactions">View transactions</Link>
             </Button>
-          </form>
+            <form action={logoutAction}>
+              <Button type="submit" variant="outline">
+                Log out
+              </Button>
+            </form>
+          </div>
         </CardContent>
       </Card>
     </div>

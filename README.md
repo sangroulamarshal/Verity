@@ -14,7 +14,7 @@ Built in phases — see the status list on the home page, or the table below.
 |---|---|---|
 | 1 | Foundation | ✅ Done |
 | 2 | Authentication | ✅ Done |
-| 3 | Transactions + manual entry | Pending |
+| 3 | Transactions + manual entry | ✅ Done |
 | 4 | CSV/Excel import + normalization | Pending |
 | 5 | Customer CRM | Pending |
 | 6 | Risk & anomaly engine | Pending |

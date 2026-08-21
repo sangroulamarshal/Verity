@@ -105,6 +105,64 @@ email rejection, and weak-password rejection were each exercised as real
 HTTP requests against the running app and confirmed against actual
 database rows.
 
+## What Phase 3 added
+
+- **Schema**: `transactions` — `organizationId` FK, `date` (calendar date,
+  no time — matches what CSV/bank exports actually provide), `amount`
+  (`numeric(14,2)`, stored and passed around as a **string**, not a JS
+  number, so no floating-point rounding is ever introduced between form
+  input, storage, and display — parsed to a number only at the point of
+  display or a future statistical calculation), `currency` (3-letter code,
+  format-checked only, not validated against a real ISO 4217 list),
+  `type` (`INCOME`/`EXPENSE` pgEnum), `category` (free text — the brief
+  doesn't define a fixed taxonomy, so none is invented here), optional
+  `description`/`referenceId`, and `source`/`sourceRecordId` (only
+  `MANUAL` is ever written this phase; `CSV`/`EXCEL` are reserved for
+  Phase 4's importer so the column doesn't need a later migration).
+- **`customerId` is deliberately not on this table yet.** The brief's
+  canonical Transaction model includes one, but `customers` doesn't exist
+  until Phase 5 — there's nothing to reference. Phase 5 adds it as a
+  proper FK via a migration once the table it points to actually exists,
+  rather than this phase inventing an un-constrained placeholder column
+  that would violate "every table holding financial data uses foreign
+  keys."
+- **Org-scoping**: every read and write in `server/services/transactions.ts`
+  takes `organizationId` as an explicit parameter (sourced from
+  `verifySession()`, never a route param) and puts it directly in the
+  query's `WHERE` clause — including `UPDATE`/`DELETE`, not just `SELECT`.
+  This is a stronger pattern than "fetch the row, then check its org and
+  reject if it doesn't match": there's no in-between step where a
+  cross-organization row is ever loaded, so there's nothing to forget to
+  check. A mismatched id simply matches zero rows and the caller gets a
+  generic "not found" — deliberately not distinguishing "doesn't exist"
+  from "belongs to someone else," same rationale as login's generic
+  "Invalid email or password."
+- **Testing split**: Vitest covers pure logic only — the Zod schema
+  (amount/date/currency edge cases) and the currency/date formatting
+  helpers — with no database dependency, consistent with the existing
+  suite and with CI's ordering (unit tests run *before* `db:push`, so a
+  DB-dependent Vitest test would never have one available). The
+  org-scoping/authorization behavior itself (cross-organization reads,
+  updates, and deletes all correctly rejected) was verified directly
+  against a real local Postgres instance, the same way Phase 2's
+  auth/session logic was — not just asserted by inspection. Real
+  browser-driven flows (create/edit/delete a transaction, and one
+  organization never seeing another's data) are covered by
+  `e2e/transactions.spec.ts` and run in CI, which has Chromium available;
+  they were not — and cannot currently be — executed from this build
+  sandbox, since its network egress doesn't allow downloading Playwright's
+  browser binaries (the same category of restriction already noted below
+  for the shadcn registry).
+- **New UI primitives**: `Dialog` (Radix-based — the one new dependency
+  this phase, `@radix-ui/react-dialog`, justified because building an
+  accessible modal with proper focus trapping by hand is real work Radix
+  already solves correctly), `Textarea` and `Table` (hand-styled native
+  elements, no new dependency), and `Select` — deliberately **not**
+  Radix's Select. A 2–3 option INCOME/EXPENSE or currency picker doesn't
+  need Radix's positioning/viewport machinery; a styled native `<select>`
+  is fully accessible and needs nothing extra. Worth revisiting once
+  Phase 5's customer picker needs a searchable list.
+
 ## Reference repos consulted
 
 

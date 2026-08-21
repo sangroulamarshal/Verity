@@ -6,7 +6,10 @@ export type AuditAction =
   | "USER_REGISTERED"
   | "LOGIN_SUCCEEDED"
   | "LOGIN_FAILED"
-  | "LOGOUT";
+  | "LOGOUT"
+  | "TRANSACTION_CREATED"
+  | "TRANSACTION_UPDATED"
+  | "TRANSACTION_DELETED";
 
 interface RecordAuditLogInput {
   action: AuditAction;
@@ -30,4 +33,19 @@ export async function recordAuditLog(input: RecordAuditLogInput): Promise<void> 
     entityId: input.entityId,
     metadata: input.metadata,
   });
+}
+
+/**
+ * Wraps recordAuditLog so a logging failure can never block the real
+ * action it's describing (a login, a transaction write, ...). Shared
+ * across every feature that writes audit log entries — introduced in
+ * Phase 2 for auth, reused as-is starting Phase 3 rather than
+ * re-implemented per feature.
+ */
+export async function auditLogSafely(...args: Parameters<typeof recordAuditLog>) {
+  try {
+    await recordAuditLog(...args);
+  } catch (error) {
+    console.error("Failed to write audit log:", error);
+  }
 }

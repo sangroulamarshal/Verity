@@ -10,7 +10,7 @@ import { SESSION_COOKIE_NAME } from "@/lib/session-token";
 // whether a session is valid (expired/revoked sessions have a cookie that
 // still "looks present" to this proxy, but verifySession() will reject
 // them against the database).
-const PROTECTED_PREFIXES = ["/dashboard"];
+const PROTECTED_PREFIXES = ["/dashboard", "/transactions"];
 const AUTH_PAGES = ["/login", "/register"];
 
 export default function proxy(request: NextRequest) {

@@ -8,7 +8,7 @@ import { hashPassword, verifyPassword } from "@/lib/password";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/client-ip";
 import { createSession, destroySession, getOptionalSession } from "@/server/services/session";
-import { recordAuditLog } from "@/server/services/audit-log";
+import { auditLogSafely } from "@/server/services/audit-log";
 import { loginSchema, registerSchema } from "./schema";
 
 export interface AuthFormState {
@@ -22,15 +22,6 @@ export interface AuthFormState {
 // registered. The dummy password is fixed and never compared to anything
 // real; only the compute cost matters.
 const dummyHashPromise = hashPassword("timing-safety-dummy-password-000");
-
-async function auditLogSafely(...args: Parameters<typeof recordAuditLog>) {
-  try {
-    await recordAuditLog(...args);
-  } catch (error) {
-    // Audit logging must never block a legitimate login/registration.
-    console.error("Failed to write audit log:", error);
-  }
-}
 
 export async function registerAction(
   _prevState: AuthFormState | undefined,

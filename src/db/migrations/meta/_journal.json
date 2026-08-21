@@ -8,6 +8,13 @@
       "when": 1787228973946,
       "tag": "0000_parched_vivisector",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787294275531,
+      "tag": "0001_transactions",
+      "breakpoints": true
     }
   ]
 }

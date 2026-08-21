@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 const PHASES = [
   { n: 1, name: "Foundation", status: "done" },
   { n: 2, name: "Authentication", status: "done" },
-  { n: 3, name: "Transactions + manual entry", status: "pending" },
+  { n: 3, name: "Transactions + manual entry", status: "done" },
   { n: 4, name: "CSV/Excel import + normalization", status: "pending" },
   { n: 5, name: "Customer CRM", status: "pending" },
   { n: 6, name: "Risk & anomaly engine", status: "pending" },
