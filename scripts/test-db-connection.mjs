@@ -21,6 +21,44 @@ if (connectionString) {
   const masked = connectionString.replace(/:[^:@]+@/, ":***@");
   console.log("DATABASE_URL (password masked):", masked);
   console.log("Contains sslmode= :", connectionString.includes("sslmode="));
+
+  const hasLeadingOrTrailingWhitespace = connectionString !== connectionString.trim();
+  console.log("Has leading/trailing whitespace:", hasLeadingOrTrailingWhitespace);
+  if (hasLeadingOrTrailingWhitespace) {
+    console.log(
+      "  ⚠️  DATABASE_URL has extra whitespace at the start or end — this is almost\n" +
+        "      always a copy-paste artifact and will break the connection. Re-copy it\n" +
+        '      without any surrounding spaces or blank lines inside the quotes.'
+    );
+  }
+
+  // Extract just the password segment (between the first ':' after
+  // '://' and the next unescaped '@') to report its length without ever
+  // printing its contents — the fastest way to notice "I meant to paste
+  // a 20-character password but this shows 6" without exposing it.
+  const credentialsMatch = connectionString.match(/:\/\/[^:]+:([^@]*)@/);
+  if (credentialsMatch) {
+    const passwordSegment = credentialsMatch[1];
+    console.log("Password segment length (as parsed from the URL):", passwordSegment.length);
+    if (/\s/.test(passwordSegment)) {
+      console.log(
+        "  ⚠️  The password segment contains whitespace — if your real password doesn't\n" +
+          "      have a space in it, this means a stray space/newline got pasted in."
+      );
+    }
+    if (/%[0-9a-fA-F]{2}/.test(passwordSegment) === false && /[@:/#%? ]/.test(passwordSegment)) {
+      console.log(
+        "  ⚠️  The password segment contains an unencoded special character (one of\n" +
+          "      @ : / # % ? or a space). If your real password contains any of these,\n" +
+          "      it needs to be percent-encoded — see the earlier guidance on that."
+      );
+    }
+  } else {
+    console.log(
+      "  ⚠️  Could not find a :password@ pattern in DATABASE_URL at all — check the\n" +
+        "      overall shape of the string."
+    );
+  }
 }
 console.log("DATABASE_CA_CERT set:", !!caCert);
 if (caCert) {
