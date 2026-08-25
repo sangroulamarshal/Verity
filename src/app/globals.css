@@ -6,101 +6,99 @@
  * Verity design tokens.
  *
  * Direction: minimal, neutral, information-dense financial software —
- * closer to Stripe/Linear than to a generic "AI dashboard". This palette
- * is an explicit, deliberate deviation from the brief's default
- * "avoid purple/blue gradients" guidance: purple is the requested brand
- * color here, not a templated default, so it's executed with restraint
- * instead of avoided — a single flat "amethyst" hue (no gradient, no
- * glow), light mode built on a near-white with a faint lavender cast,
- * dark mode built on a near-black with the same undertone rather than a
- * neutral gray, so the two modes read as one family rather than two
- * unrelated palettes bolted together.
+ * closer to Stripe/Linear than to a generic "AI dashboard". Brand color
+ * is a single flat indigo (no gradient, no glow) used sparingly — active
+ * nav, primary actions, links, focus rings — against an otherwise neutral
+ * slate/gray surface. Roughly 90% neutral / 7% brand / 3% semantic, by
+ * design: color communicates state here, it doesn't decorate.
  *
  * Risk severity colors (low/medium/high/critical) are a separate semantic
  * scale, not decorative — they exist so the risk engine's output is
  * scannable at a glance, per the "explainability" requirement, and are
- * deliberately NOT part of the purple family so a risk badge is never
- * confusable with a brand/UI accent.
+ * deliberately NOT part of the brand family so a risk badge is never
+ * confusable with a UI accent. Income/expense reuse the same semantic
+ * scale (income = positive) rather than inventing a second one.
  */
 
 :root {
   --radius: 0.375rem; /* restrained radius — not the rounded-2xl default */
 
-  --background: #faf8fc;
-  --foreground: #1b1626;
+  --background: #f7f8fa;
+  --foreground: #111827;
 
   --card: #ffffff;
-  --card-foreground: #1b1626;
+  --card-foreground: #111827;
 
   --popover: #ffffff;
-  --popover-foreground: #1b1626;
+  --popover-foreground: #111827;
 
-  --primary: #5b33a6;
-  --primary-foreground: #faf8fc;
+  --primary: #4f46e5;
+  --primary-foreground: #f8fafc;
 
-  --secondary: #f1ecf9;
-  --secondary-foreground: #1b1626;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #111827;
 
-  --muted: #f1ecf9;
-  --muted-foreground: #6b6379;
+  --muted: #f1f5f9;
+  --muted-foreground: #667085;
 
-  --accent: #ece2f9;
-  --accent-foreground: #5b33a6;
+  --accent: #eef2ff;
+  --accent-foreground: #4338ca;
 
-  --destructive: #b3261e;
-  --destructive-foreground: #faf8fc;
+  --destructive: #dc2626;
+  --destructive-foreground: #f8fafc;
 
-  --border: #e4dcf0;
-  --input: #e4dcf0;
-  --ring: #5b33a6;
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #4f46e5;
 
   /* Risk & anomaly severity scale (semantic, not decorative) */
-  --risk-low: #1a7f37;
-  --risk-medium: #b7791f;
-  --risk-high: #c2540a;
-  --risk-critical: #c0342a;
+  --risk-low: #16a34a;
+  --risk-medium: #d97706;
+  --risk-high: #ea580c;
+  --risk-critical: #dc2626;
 
-  /* Financial semantics */
-  --income: #1a7f37;
-  --expense: #62697a;
+  /* Financial semantics — income reuses "positive", expense stays neutral
+     (spending isn't inherently bad, so it doesn't get a warning color) */
+  --income: #16a34a;
+  --expense: #475569;
 }
 
 .dark {
-  --background: #0b0810;
-  --foreground: #ede7f6;
+  --background: #080b12;
+  --foreground: #f8fafc;
 
-  --card: #140f1e;
-  --card-foreground: #ede7f6;
+  --card: #111827;
+  --card-foreground: #f8fafc;
 
-  --popover: #140f1e;
-  --popover-foreground: #ede7f6;
+  --popover: #111827;
+  --popover-foreground: #f8fafc;
 
-  --primary: #9b7be0;
-  --primary-foreground: #0b0810;
+  --primary: #6366f1;
+  --primary-foreground: #f8fafc;
 
-  --secondary: #1c1628;
-  --secondary-foreground: #ede7f6;
+  --secondary: #1e293b;
+  --secondary-foreground: #f8fafc;
 
-  --muted: #1c1628;
-  --muted-foreground: #948aa8;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
 
-  --accent: #241b34;
-  --accent-foreground: #b49aeb;
+  --accent: #1e1b4b;
+  --accent-foreground: #a5b4fc;
 
-  --destructive: #e5645a;
-  --destructive-foreground: #0b0810;
+  --destructive: #f87171;
+  --destructive-foreground: #080b12;
 
-  --border: #241c33;
-  --input: #241c33;
-  --ring: #9b7be0;
+  --border: #273449;
+  --input: #273449;
+  --ring: #6366f1;
 
-  --risk-low: #3fb95f;
-  --risk-medium: #d9a441;
-  --risk-high: #e08a4d;
-  --risk-critical: #e5645a;
+  --risk-low: #4ade80;
+  --risk-medium: #fbbf24;
+  --risk-high: #fb923c;
+  --risk-critical: #f87171;
 
-  --income: #3fb95f;
-  --expense: #8b93a1;
+  --income: #4ade80;
+  --expense: #94a3b8;
 }
 
 @theme inline {

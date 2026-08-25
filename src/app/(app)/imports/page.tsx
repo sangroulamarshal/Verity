@@ -15,7 +15,7 @@ export default async function ImportsPage() {
   const history = await listImports(session.organizationId);
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-10">
+    <div className="mx-auto w-full max-w-4xl px-6 py-8">
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <h1 className="text-lg font-semibold tracking-tight">Imports</h1>

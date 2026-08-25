@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { ThemeProvider } from "@/components/theme-provider";
-import { AppHeader } from "@/components/app-header";
 import "./globals.css";
 
 // Self-hosted font files (no build-time fetch to Google Fonts) — one less
@@ -37,7 +36,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           enableSystem
           disableTransitionOnChange
         >
-          <AppHeader />
           <main className="flex flex-1 flex-col">{children}</main>
         </ThemeProvider>
       </body>
