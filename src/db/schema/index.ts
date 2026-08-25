@@ -11,7 +11,6 @@
 // a table.
 export * from "./organizations";
 export * from "./users";
-export * from "./sessions";
 export * from "./audit-logs";
 export * from "./transactions";
 export * from "./imports";

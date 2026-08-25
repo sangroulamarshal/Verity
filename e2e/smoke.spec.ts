@@ -1,5 +1,15 @@
 import { test, expect } from "@playwright/test";
 
+// registration/login now call a real Supabase Auth project (NEXT_PUBLIC_
+// SUPABASE_URL/ANON_KEY from your env) instead of this app's own DB. The
+// assertions below assume that test project has "Confirm email" disabled
+// (Supabase dashboard > Authentication > Providers > Email) so signUp
+// returns an active session immediately — the same as this app's old
+// behavior. With confirmation enabled, registration instead lands on
+// /register/check-email and there's no session to test /dashboard or
+// log-out against without clicking a real emailed link, which these
+// tests can't do.
+
 test("home page renders the Verity shell", async ({ page }) => {
   await page.goto("/");
 

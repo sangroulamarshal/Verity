@@ -1,7 +1,6 @@
 import { relations } from "drizzle-orm";
 import { organizations } from "./organizations";
 import { users } from "./users";
-import { sessions } from "./sessions";
 import { auditLogs } from "./audit-logs";
 import { transactions } from "./transactions";
 import { imports, importMappings } from "./imports";
@@ -47,16 +46,8 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     fields: [users.organizationId],
     references: [organizations.id],
   }),
-  sessions: many(sessions),
   auditLogs: many(auditLogs),
   imports: many(imports),
-}));
-
-export const sessionsRelations = relations(sessions, ({ one }) => ({
-  user: one(users, {
-    fields: [sessions.userId],
-    references: [users.id],
-  }),
 }));
 
 export const auditLogsRelations = relations(auditLogs, ({ one }) => ({

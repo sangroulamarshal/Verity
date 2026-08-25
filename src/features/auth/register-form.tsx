@@ -2,10 +2,11 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { registerAction, type AuthFormState } from "./actions";
+import { registerAction, signInWithGoogleAction, type AuthFormState } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { GoogleIcon } from "@/components/icons/google-icon";
 
 const initialState: AuthFormState = {};
 
@@ -13,7 +14,21 @@ export function RegisterForm() {
   const [state, action, pending] = useActionState(registerAction, initialState);
 
   return (
-    <form action={action} className="flex flex-col gap-4" noValidate>
+    <div className="flex flex-col gap-4">
+      <form action={signInWithGoogleAction}>
+        <Button type="submit" variant="outline" className="w-full gap-2">
+          <GoogleIcon className="size-4" />
+          Continue with Google
+        </Button>
+      </form>
+
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="h-px flex-1 bg-border" />
+        or
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      <form action={action} className="flex flex-col gap-4" noValidate>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="organizationName">Organization name</Label>
         <Input
@@ -74,5 +89,6 @@ export function RegisterForm() {
         </Link>
       </p>
     </form>
+    </div>
   );
 }

@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
 
+// registerNewOrg() below now calls a real Supabase Auth project — see
+// e2e/smoke.spec.ts for the "Confirm email" test-project assumption
+// these registration-dependent tests share.
+
 async function registerNewOrg(page: import("@playwright/test").Page, orgName: string) {
   const email = `e2e-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
   await page.goto("/register");
