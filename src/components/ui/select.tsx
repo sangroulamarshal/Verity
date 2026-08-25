@@ -16,7 +16,7 @@ function Select({ className, children, ...props }: React.ComponentProps<"select"
       <select
         data-slot="select"
         className={cn(
-          "flex h-9 w-full appearance-none rounded-md border border-input bg-transparent px-3 py-1 pr-8 text-sm shadow-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
+          "flex h-9 w-full appearance-none rounded-md border border-input bg-popover px-3 py-1 pr-8 text-sm text-popover-foreground shadow-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
           "aria-[invalid=true]:border-destructive aria-[invalid=true]:focus-visible:ring-destructive",
           className
         )}
