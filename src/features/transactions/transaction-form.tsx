@@ -64,7 +64,7 @@ export function TransactionForm({
             id="date"
             name="date"
             type="date"
-            defaultValue={defaultValues?.date ?? todayIso()}
+            defaultValue={state.values?.date ?? defaultValues?.date ?? todayIso()}
             required
             aria-invalid={!!state.errors?.date}
           />
@@ -78,7 +78,7 @@ export function TransactionForm({
           <Select
             id="type"
             name="type"
-            defaultValue={defaultValues?.type ?? "EXPENSE"}
+            defaultValue={state.values?.type ?? defaultValues?.type ?? "EXPENSE"}
             required
             aria-invalid={!!state.errors?.type}
           >
@@ -99,7 +99,7 @@ export function TransactionForm({
             name="amount"
             inputMode="decimal"
             placeholder="0.00"
-            defaultValue={defaultValues?.amount}
+            defaultValue={state.values?.amount ?? defaultValues?.amount}
             required
             aria-invalid={!!state.errors?.amount}
           />
@@ -113,7 +113,7 @@ export function TransactionForm({
           <Select
             id="currency"
             name="currency"
-            defaultValue={defaultValues?.currency ?? "GBP"}
+            defaultValue={state.values?.currency ?? defaultValues?.currency ?? "GBP"}
             required
             aria-invalid={!!state.errors?.currency}
           >
@@ -134,7 +134,7 @@ export function TransactionForm({
         <Input
           id="category"
           name="category"
-          defaultValue={defaultValues?.category}
+          defaultValue={state.values?.category ?? defaultValues?.category}
           required
           aria-invalid={!!state.errors?.category}
         />
@@ -150,7 +150,7 @@ export function TransactionForm({
         <Input
           id="referenceId"
           name="referenceId"
-          defaultValue={defaultValues?.referenceId}
+          defaultValue={state.values?.referenceId ?? defaultValues?.referenceId}
           aria-invalid={!!state.errors?.referenceId}
         />
         {state.errors?.referenceId && (
@@ -166,7 +166,7 @@ export function TransactionForm({
           id="description"
           name="description"
           rows={2}
-          defaultValue={defaultValues?.description}
+          defaultValue={state.values?.description ?? defaultValues?.description}
           aria-invalid={!!state.errors?.description}
         />
         {state.errors?.description && (

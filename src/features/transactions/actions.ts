@@ -14,6 +14,23 @@ export interface TransactionFormState {
   errors?: Record<string, string[]>;
   message?: string;
   success?: boolean;
+  /**
+   * The raw submitted values, echoed back on failure so the form can use
+   * them as its new defaults. Necessary because React 19 resets
+   * uncontrolled <form> fields to their defaultValue once a form action
+   * finishes — including on a failed submission, not just success — so
+   * without this, fixing one invalid field would silently wipe every
+   * other field the person had already filled in.
+   */
+  values?: {
+    date?: string;
+    amount?: string;
+    currency?: string;
+    type?: string;
+    category?: string;
+    description?: string;
+    referenceId?: string;
+  };
 }
 
 function parseTransactionFormData(formData: FormData) {
@@ -28,6 +45,18 @@ function parseTransactionFormData(formData: FormData) {
   });
 }
 
+function rawFormValues(formData: FormData): TransactionFormState["values"] {
+  return {
+    date: formData.get("date")?.toString(),
+    amount: formData.get("amount")?.toString(),
+    currency: formData.get("currency")?.toString(),
+    type: formData.get("type")?.toString(),
+    category: formData.get("category")?.toString(),
+    description: formData.get("description")?.toString(),
+    referenceId: formData.get("referenceId")?.toString(),
+  };
+}
+
 export async function createTransactionAction(
   _prevState: TransactionFormState | undefined,
   formData: FormData
@@ -36,7 +65,7 @@ export async function createTransactionAction(
 
   const parsed = parseTransactionFormData(formData);
   if (!parsed.success) {
-    return { errors: parsed.error.flatten().fieldErrors };
+    return { errors: parsed.error.flatten().fieldErrors, values: rawFormValues(formData) };
   }
 
   const row = await createTransaction(session.organizationId, parsed.data);
@@ -62,14 +91,14 @@ export async function updateTransactionAction(
 
   const parsed = parseTransactionFormData(formData);
   if (!parsed.success) {
-    return { errors: parsed.error.flatten().fieldErrors };
+    return { errors: parsed.error.flatten().fieldErrors, values: rawFormValues(formData) };
   }
 
   const row = await updateTransaction(session.organizationId, id, parsed.data);
   if (!row) {
     // Generic — doesn't distinguish "no such transaction" from "belongs to
     // a different organization". See server/services/transactions.ts.
-    return { message: "Transaction not found." };
+    return { message: "Transaction not found.", values: rawFormValues(formData) };
   }
 
   await auditLogSafely({
