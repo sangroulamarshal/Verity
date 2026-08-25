@@ -16,8 +16,9 @@
  * scale, not decorative — they exist so the risk engine's output is
  * scannable at a glance, per the "explainability" requirement, and are
  * deliberately NOT part of the brand family so a risk badge is never
- * confusable with a UI accent. Income/expense reuse the same semantic
- * scale (income = positive) rather than inventing a second one.
+ * confusable with a UI accent. Income/expense reuse that same red/green
+ * direction-of-money convention rather than inventing a third scale —
+ * green for money in, red for money out.
  */
 
 :root {
@@ -57,10 +58,11 @@
   --risk-high: #ea580c;
   --risk-critical: #dc2626;
 
-  /* Financial semantics — income reuses "positive", expense stays neutral
-     (spending isn't inherently bad, so it doesn't get a warning color) */
+  /* Financial semantics — income reuses "positive", expense reuses
+     "critical" (money leaving the business reads as red, matching the
+     universal red/green convention for financial direction) */
   --income: #16a34a;
-  --expense: #475569;
+  --expense: #dc2626;
 }
 
 .dark {
@@ -98,7 +100,7 @@
   --risk-critical: #f87171;
 
   --income: #4ade80;
-  --expense: #94a3b8;
+  --expense: #f87171;
 }
 
 @theme inline {

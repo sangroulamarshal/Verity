@@ -76,6 +76,7 @@ export function TransactionForm({
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="type">Type</Label>
           <Select
+            key={state.values?.type ?? defaultValues?.type ?? "EXPENSE"}
             id="type"
             name="type"
             defaultValue={state.values?.type ?? defaultValues?.type ?? "EXPENSE"}
@@ -111,6 +112,7 @@ export function TransactionForm({
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="currency">Currency</Label>
           <Select
+            key={state.values?.currency ?? defaultValues?.currency ?? "GBP"}
             id="currency"
             name="currency"
             defaultValue={state.values?.currency ?? defaultValues?.currency ?? "GBP"}

@@ -11,7 +11,7 @@ import {
 
 export default function TransactionsLoading() {
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-8">
+    <div className="mx-auto w-full max-w-7xl px-6 py-8 md:px-10">
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <Skeleton className="h-5 w-32" />
