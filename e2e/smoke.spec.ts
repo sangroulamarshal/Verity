@@ -5,14 +5,13 @@ test("home page renders the Verity shell", async ({ page }) => {
 
   await expect(page.getByRole("heading", { name: "Financial clarity you can trust." })).toBeVisible();
   await expect(page.getByRole("link", { name: "Verity" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Toggle theme" })).toBeVisible();
+  await expect(page.getByRole("radiogroup", { name: "Theme" })).toBeVisible();
 });
 
 test("theme toggle switches to dark mode", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Toggle theme" }).click();
-  await page.getByRole("menuitem", { name: "Dark" }).click();
+  await page.getByRole("radio", { name: "Dark" }).click();
 
   await expect(page.locator("html")).toHaveClass(/dark/);
 });
