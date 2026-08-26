@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
-  title: "Check your email — Verity",
+  title: "Check your email",
 };
 
 export default function CheckEmailPage() {

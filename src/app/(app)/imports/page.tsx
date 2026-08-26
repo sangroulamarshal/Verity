@@ -7,7 +7,7 @@ import { formatDate } from "@/lib/format";
 import { ImportWizard } from "@/features/imports/import-wizard";
 
 export const metadata: Metadata = {
-  title: "Imports — Verity",
+  title: "Imports",
 };
 
 export default async function ImportsPage() {

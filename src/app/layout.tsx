@@ -8,7 +8,7 @@ import "./globals.css";
 // external network dependency for both this build and CI.
 
 export const metadata: Metadata = {
-  title: "Verity — Financial clarity you can trust.",
+  title: "Verity",
   description:
     "Verity turns messy business financial data into a clear view of customers, transactions, anomalies, and cash flow.",
 };

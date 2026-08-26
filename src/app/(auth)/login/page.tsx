@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { LoginForm } from "@/features/auth/login-form";
 
 export const metadata: Metadata = {
-  title: "Log in — Verity",
+  title: "Log in",
 };
 
 export default function LoginPage() {

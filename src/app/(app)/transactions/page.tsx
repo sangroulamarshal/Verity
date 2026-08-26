@@ -8,7 +8,7 @@ import { TransactionDialog } from "@/features/transactions/transaction-dialog";
 import { TransactionsTable } from "@/features/transactions/transactions-table";
 
 export const metadata: Metadata = {
-  title: "Transactions — Verity",
+  title: "Transactions",
 };
 
 export default async function TransactionsPage(props: PageProps<"/transactions">) {

@@ -12,7 +12,7 @@ import { CashFlowChart } from "@/components/cash-flow-chart";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 export const metadata: Metadata = {
-  title: "Overview — Verity",
+  title: "Overview",
 };
 
 function percentChange(current: number, previous: number) {

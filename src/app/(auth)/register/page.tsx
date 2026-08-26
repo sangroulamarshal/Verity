@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { RegisterForm } from "@/features/auth/register-form";
 
 export const metadata: Metadata = {
-  title: "Create your account — Verity",
+  title: "Create your account",
 };
 
 export default function RegisterPage() {
