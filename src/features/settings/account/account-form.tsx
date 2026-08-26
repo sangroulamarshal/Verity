@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +29,16 @@ export function AccountForm({
   organizationBaseCurrency,
 }: AccountFormProps) {
   const [state, formAction, pending] = useActionState(updateProfileAction, initialState);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state.success) {
+      router.refresh();
+    }
+    // Only re-run when the action reports a fresh success — see the
+    // matching note in transaction-form.tsx's onSuccess effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.success]);
 
   return (
     <form action={formAction} className="flex flex-col gap-4">

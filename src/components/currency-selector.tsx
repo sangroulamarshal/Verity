@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +25,7 @@ interface CurrencySelectorProps {
  */
 export function CurrencySelector({ value }: CurrencySelectorProps) {
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   return (
     <DropdownMenu>
@@ -43,7 +45,20 @@ export function CurrencySelector({ value }: CurrencySelectorProps) {
         {DISPLAY_CURRENCIES.map((code) => (
           <DropdownMenuItem
             key={code}
-            onClick={() => startTransition(() => setDisplayCurrencyAction(code))}
+            onClick={() =>
+              startTransition(async () => {
+                // This button has no local state of its own — `value`
+                // is purely a server-passed prop. setDisplayCurrencyAction's
+                // revalidatePath() marks the server cache stale, but
+                // doesn't itself repaint this already-mounted client
+                // tree; without an explicit refresh, the button kept
+                // showing whatever it showed on the page's original
+                // load until a manual browser reload forced a fresh
+                // server render.
+                await setDisplayCurrencyAction(code);
+                router.refresh();
+              })
+            }
           >
             {code}
           </DropdownMenuItem>
