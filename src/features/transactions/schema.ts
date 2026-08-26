@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRANSACTION_CURRENCIES } from "@/lib/currency";
 
 // Generous but real sanity ceiling — catches fat-finger extra zeros
 // without constraining any legitimate SMB transaction.
@@ -46,7 +47,19 @@ const currencySchema = z
   .string()
   .trim()
   .toUpperCase()
-  .regex(/^[A-Z]{3}$/, "Enter a 3-letter currency code, e.g. GBP.");
+  .refine(
+    (value) => (TRANSACTION_CURRENCIES as readonly string[]).includes(value),
+    `Select one of: ${TRANSACTION_CURRENCIES.join(", ")}.`
+  );
+
+const PAYMENT_METHODS = [
+  "BANK_TRANSFER",
+  "CARD",
+  "CASH",
+  "CHEQUE",
+  "DIRECT_DEBIT",
+  "OTHER",
+] as const;
 
 const categorySchema = z
   .string()
@@ -73,8 +86,26 @@ export const transactionSchema = z.object({
     message: "Select a transaction type.",
   }),
   category: categorySchema,
+  counterparty: optionalText(255, "Must be at most 255 characters."),
+  paymentMethod: z
+    .enum(PAYMENT_METHODS, { message: "Select a payment method." })
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => (value ? value : undefined)),
   description: optionalText(2000, "Must be at most 2000 characters."),
   referenceId: optionalText(255, "Must be at most 255 characters."),
+  presetId: optionalText(255, "Invalid preset."),
 });
 
 export type TransactionInput = z.infer<typeof transactionSchema>;
+
+export const PAYMENT_METHOD_LABELS: Record<(typeof PAYMENT_METHODS)[number], string> = {
+  BANK_TRANSFER: "Bank transfer",
+  CARD: "Card",
+  CASH: "Cash",
+  CHEQUE: "Cheque",
+  DIRECT_DEBIT: "Direct debit",
+  OTHER: "Other",
+};
+
+export { PAYMENT_METHODS };

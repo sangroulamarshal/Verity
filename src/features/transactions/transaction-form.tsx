@@ -1,11 +1,14 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { TRANSACTION_CURRENCIES } from "@/lib/currency";
+import { PAYMENT_METHOD_LABELS, PAYMENT_METHODS } from "./schema";
+import { ExchangeRatePreview } from "./exchange-rate-preview";
 import type { TransactionFormState } from "./actions";
 
 export interface TransactionFormDefaults {
@@ -14,8 +17,11 @@ export interface TransactionFormDefaults {
   currency?: string;
   type?: "INCOME" | "EXPENSE";
   category?: string;
+  counterparty?: string;
+  paymentMethod?: string;
   description?: string;
   referenceId?: string;
+  presetId?: string;
 }
 
 interface TransactionFormProps {
@@ -35,8 +41,6 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-const CURRENCIES = ["GBP", "USD", "EUR", "NPR", "INR", "AUD", "CAD"];
-
 export function TransactionForm({
   action,
   defaultValues,
@@ -45,6 +49,11 @@ export function TransactionForm({
   onSuccess,
 }: TransactionFormProps) {
   const [state, formAction, pending] = useActionState(action, initialState);
+
+  const [amount, setAmount] = useState(state.values?.amount ?? defaultValues?.amount ?? "");
+  const [currency, setCurrency] = useState(
+    state.values?.currency ?? defaultValues?.currency ?? "GBP"
+  );
 
   useEffect(() => {
     if (state.success) {
@@ -57,6 +66,10 @@ export function TransactionForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-4" noValidate>
+      {defaultValues?.presetId && (
+        <input type="hidden" name="presetId" value={defaultValues.presetId} />
+      )}
+
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="date">Date</Label>
@@ -100,7 +113,8 @@ export function TransactionForm({
             name="amount"
             inputMode="decimal"
             placeholder="0.00"
-            defaultValue={state.values?.amount ?? defaultValues?.amount}
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
             required
             aria-invalid={!!state.errors?.amount}
           />
@@ -115,11 +129,12 @@ export function TransactionForm({
             key={state.values?.currency ?? defaultValues?.currency ?? "GBP"}
             id="currency"
             name="currency"
-            defaultValue={state.values?.currency ?? defaultValues?.currency ?? "GBP"}
+            value={currency}
+            onChange={(event) => setCurrency(event.target.value)}
             required
             aria-invalid={!!state.errors?.currency}
           >
-            {CURRENCIES.map((code) => (
+            {TRANSACTION_CURRENCIES.map((code) => (
               <option key={code} value={code}>
                 {code}
               </option>
@@ -130,6 +145,8 @@ export function TransactionForm({
           )}
         </div>
       </div>
+
+      <ExchangeRatePreview amount={amount} currency={currency} />
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="category">Category</Label>
@@ -143,6 +160,46 @@ export function TransactionForm({
         {state.errors?.category && (
           <p className="text-xs text-destructive">{state.errors.category[0]}</p>
         )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="counterparty">
+            Customer/Vendor <span className="text-muted-foreground">(optional)</span>
+          </Label>
+          <Input
+            id="counterparty"
+            name="counterparty"
+            defaultValue={state.values?.counterparty ?? defaultValues?.counterparty}
+            aria-invalid={!!state.errors?.counterparty}
+          />
+          {state.errors?.counterparty && (
+            <p className="text-xs text-destructive">{state.errors.counterparty[0]}</p>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="paymentMethod">
+            Payment method <span className="text-muted-foreground">(optional)</span>
+          </Label>
+          <Select
+            key={state.values?.paymentMethod ?? defaultValues?.paymentMethod ?? ""}
+            id="paymentMethod"
+            name="paymentMethod"
+            defaultValue={state.values?.paymentMethod ?? defaultValues?.paymentMethod ?? ""}
+            aria-invalid={!!state.errors?.paymentMethod}
+          >
+            <option value="">Not specified</option>
+            {PAYMENT_METHODS.map((method) => (
+              <option key={method} value={method}>
+                {PAYMENT_METHOD_LABELS[method]}
+              </option>
+            ))}
+          </Select>
+          {state.errors?.paymentMethod && (
+            <p className="text-xs text-destructive">{state.errors.paymentMethod[0]}</p>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col gap-1.5">

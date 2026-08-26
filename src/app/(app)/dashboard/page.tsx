@@ -43,14 +43,14 @@ export default async function DashboardPage() {
 
   const [[org], summary] = await Promise.all([
     db
-      .select({ name: organizations.name })
+      .select({ name: organizations.name, baseCurrency: organizations.baseCurrency })
       .from(organizations)
       .where(eq(organizations.id, session.organizationId))
       .limit(1),
     getDashboardSummary(session.organizationId),
   ]);
 
-  const currency = summary.primaryCurrency ?? "USD";
+  const currency = org?.baseCurrency ?? "GBP";
   const months = summary.monthlyTotals;
   const current = months.at(-1);
   const previous = months.at(-2);

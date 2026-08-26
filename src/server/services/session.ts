@@ -10,6 +10,8 @@ export interface AuthenticatedSession {
   userId: string;
   organizationId: string;
   email: string;
+  role: "OWNER" | "ADMIN" | "FINANCE" | "ANALYST" | "VIEWER";
+  displayCurrency: string | null;
 }
 
 /**
@@ -58,6 +60,8 @@ export const getOptionalSession = cache(async (): Promise<AuthenticatedSession |
       userId: users.id,
       organizationId: users.organizationId,
       email: users.email,
+      role: users.role,
+      displayCurrency: users.displayCurrency,
     })
     .from(users)
     .where(eq(users.supabaseUserId, user.id))

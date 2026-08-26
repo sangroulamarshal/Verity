@@ -3,6 +3,8 @@ import { and, desc, eq, gte, inArray, lte, or } from "drizzle-orm";
 import { db } from "@/db/client";
 import { imports, importMappings, transactions } from "@/db/schema";
 import { buildDuplicateKey } from "@/server/engines/normalization";
+import { getExchangeRate } from "./fx";
+import { convertAmount } from "@/lib/money";
 import type {
   ColumnMappingEntry,
   DuplicateCandidateRow,
@@ -121,9 +123,24 @@ export interface CommitImportInput {
  */
 export async function commitImport(
   organizationId: string,
+  organizationBaseCurrency: string,
   userId: string,
   input: CommitImportInput
 ): Promise<ImportRecord> {
+  // One FX lookup per distinct currency in the batch, not one per row —
+  // a 500-row CSV in a single currency should cost one rate lookup
+  // (cached in fx_rates besides), not 500. Each row still gets its own
+  // stored exchangeRateTime, since they all share the same lookup.
+  const distinctCurrencies = [...new Set(input.rowsToInsert.map((row) => row.currency))];
+  const rateByCurrency = new Map(
+    await Promise.all(
+      distinctCurrencies.map(
+        async (currency) =>
+          [currency, await getExchangeRate(currency, organizationBaseCurrency)] as const
+      )
+    )
+  );
+
   return db.transaction(async (tx) => {
     const [importRow] = await tx
       .insert(imports)
@@ -152,22 +169,31 @@ export async function commitImport(
 
     if (input.rowsToInsert.length > 0) {
       await tx.insert(transactions).values(
-        input.rowsToInsert.map((row) => ({
-          organizationId,
-          date: row.date,
-          amount: row.amount.toFixed(2),
-          currency: row.currency,
-          type: row.type,
-          category: row.category,
-          description: row.description ?? null,
-          referenceId: row.referenceId ?? null,
-          source: input.source,
-          // Provenance back to this import and the row within it —
-          // deliberately not derived from any original CSV/XLSX
-          // internals (no original row index, sheet name, etc.), so
-          // downstream code still never depends on the source format.
-          sourceRecordId: `${importRow.id}:row-${row.rowNumber}`,
-        }))
+        input.rowsToInsert.map((row) => {
+          const amount = row.amount.toFixed(2);
+          const rate = rateByCurrency.get(row.currency)!;
+          return {
+            organizationId,
+            date: row.date,
+            amount,
+            currency: row.currency,
+            baseAmount: convertAmount(amount, rate.rate),
+            baseCurrency: organizationBaseCurrency,
+            exchangeRate: rate.rate,
+            exchangeRateSource: rate.source,
+            exchangeRateTime: rate.time,
+            type: row.type,
+            category: row.category,
+            description: row.description ?? null,
+            referenceId: row.referenceId ?? null,
+            source: input.source,
+            // Provenance back to this import and the row within it —
+            // deliberately not derived from any original CSV/XLSX
+            // internals (no original row index, sheet name, etc.), so
+            // downstream code still never depends on the source format.
+            sourceRecordId: `${importRow.id}:row-${row.rowNumber}`,
+          };
+        })
       );
     }
 

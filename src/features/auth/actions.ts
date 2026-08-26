@@ -1,9 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
-import { organizations, users } from "@/db/schema";
+import { organizations, users, organizationInvites } from "@/db/schema";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/client-ip";
 import { getOptionalSession } from "@/server/services/session";
@@ -25,12 +25,47 @@ function siteUrl(): string {
  * own domain data. Shared by password registration and the OAuth
  * callback — both need the exact same "first time we've seen this
  * Supabase user id" provisioning step.
+ *
+ * Checks for a pending organization invite matching this email first
+ * (Settings > Members — brief section 37): if one exists, this person
+ * joins that organization with the invited role instead of getting a
+ * brand-new organization auto-provisioned. `organizationName` is only
+ * used in the no-invite path.
  */
 export async function provisionOrganization(input: {
   organizationName: string;
   email: string;
   supabaseUserId: string;
 }) {
+  const normalizedEmail = input.email.toLowerCase().trim();
+
+  const [pendingInvite] = await db
+    .select()
+    .from(organizationInvites)
+    .where(and(eq(organizationInvites.email, normalizedEmail), isNull(organizationInvites.acceptedAt)))
+    .limit(1);
+
+  if (pendingInvite) {
+    return db.transaction(async (tx) => {
+      const [user] = await tx
+        .insert(users)
+        .values({
+          organizationId: pendingInvite.organizationId,
+          email: input.email,
+          supabaseUserId: input.supabaseUserId,
+          role: pendingInvite.role,
+        })
+        .returning({ id: users.id, organizationId: users.organizationId });
+
+      await tx
+        .update(organizationInvites)
+        .set({ acceptedAt: new Date() })
+        .where(eq(organizationInvites.id, pendingInvite.id));
+
+      return user;
+    });
+  }
+
   return db.transaction(async (tx) => {
     const [org] = await tx
       .insert(organizations)
@@ -43,6 +78,9 @@ export async function provisionOrganization(input: {
         organizationId: org.id,
         email: input.email,
         supabaseUserId: input.supabaseUserId,
+        // No explicit role — defaults to OWNER (see db/schema/users.ts),
+        // correct here since this branch always creates a brand-new
+        // organization that this user is the founder of.
       })
       .returning({ id: users.id, organizationId: users.organizationId });
 

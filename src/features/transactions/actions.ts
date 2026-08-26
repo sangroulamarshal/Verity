@@ -6,9 +6,14 @@ import {
   createTransaction,
   updateTransaction,
   deleteTransaction,
+  getTransactionById,
 } from "@/server/services/transactions";
+import { getOrganization } from "@/server/services/organizations";
+import { FxRateUnavailableError } from "@/server/services/fx";
 import { auditLogSafely } from "@/server/services/audit-log";
+import { canWriteTransactions } from "@/lib/permissions";
 import { transactionSchema } from "./schema";
+import { diffTransaction } from "./audit-diff";
 
 export interface TransactionFormState {
   errors?: Record<string, string[]>;
@@ -28,6 +33,8 @@ export interface TransactionFormState {
     currency?: string;
     type?: string;
     category?: string;
+    counterparty?: string;
+    paymentMethod?: string;
     description?: string;
     referenceId?: string;
   };
@@ -40,8 +47,11 @@ function parseTransactionFormData(formData: FormData) {
     currency: formData.get("currency"),
     type: formData.get("type"),
     category: formData.get("category"),
+    counterparty: formData.get("counterparty"),
+    paymentMethod: formData.get("paymentMethod"),
     description: formData.get("description"),
     referenceId: formData.get("referenceId"),
+    presetId: formData.get("presetId"),
   });
 }
 
@@ -52,9 +62,16 @@ function rawFormValues(formData: FormData): TransactionFormState["values"] {
     currency: formData.get("currency")?.toString(),
     type: formData.get("type")?.toString(),
     category: formData.get("category")?.toString(),
+    counterparty: formData.get("counterparty")?.toString(),
+    paymentMethod: formData.get("paymentMethod")?.toString(),
     description: formData.get("description")?.toString(),
     referenceId: formData.get("referenceId")?.toString(),
   };
+}
+
+/** FX failure -> a form-level message, never a saved guess. Brief section 25. */
+function fxErrorMessage(error: FxRateUnavailableError, baseCurrency: string): string {
+  return `Could not convert to ${baseCurrency}: exchange rate for ${error.sourceCurrency} \u2192 ${error.targetCurrency} is unavailable right now. Please try again shortly.`;
 }
 
 export async function createTransactionAction(
@@ -63,12 +80,27 @@ export async function createTransactionAction(
 ): Promise<TransactionFormState> {
   const session = await verifySession();
 
+  if (!canWriteTransactions(session.role)) {
+    return { message: "Your role doesn't have permission to add transactions." };
+  }
+
   const parsed = parseTransactionFormData(formData);
   if (!parsed.success) {
     return { errors: parsed.error.flatten().fieldErrors, values: rawFormValues(formData) };
   }
 
-  const row = await createTransaction(session.organizationId, parsed.data);
+  const organization = await getOrganization(session.organizationId);
+  const baseCurrency = organization?.baseCurrency ?? "GBP";
+
+  let row;
+  try {
+    row = await createTransaction(session.organizationId, baseCurrency, parsed.data);
+  } catch (error) {
+    if (error instanceof FxRateUnavailableError) {
+      return { message: fxErrorMessage(error, baseCurrency), values: rawFormValues(formData) };
+    }
+    throw error;
+  }
 
   await auditLogSafely({
     action: "TRANSACTION_CREATED",
@@ -76,9 +108,19 @@ export async function createTransactionAction(
     userId: session.userId,
     entityType: "transaction",
     entityId: row.id,
+    metadata: {
+      date: row.date,
+      amount: row.amount,
+      currency: row.currency,
+      baseAmount: row.baseAmount,
+      baseCurrency: row.baseCurrency,
+      type: row.type,
+      category: row.category,
+    },
   });
 
   revalidatePath("/transactions");
+  revalidatePath("/dashboard");
   return { success: true };
 }
 
@@ -89,12 +131,30 @@ export async function updateTransactionAction(
 ): Promise<TransactionFormState> {
   const session = await verifySession();
 
+  if (!canWriteTransactions(session.role)) {
+    return { message: "Your role doesn't have permission to edit transactions." };
+  }
+
   const parsed = parseTransactionFormData(formData);
   if (!parsed.success) {
     return { errors: parsed.error.flatten().fieldErrors, values: rawFormValues(formData) };
   }
 
-  const row = await updateTransaction(session.organizationId, id, parsed.data);
+  const organization = await getOrganization(session.organizationId);
+  const baseCurrency = organization?.baseCurrency ?? "GBP";
+
+  const before = await getTransactionById(session.organizationId, id);
+
+  let row;
+  try {
+    row = await updateTransaction(session.organizationId, baseCurrency, id, parsed.data);
+  } catch (error) {
+    if (error instanceof FxRateUnavailableError) {
+      return { message: fxErrorMessage(error, baseCurrency), values: rawFormValues(formData) };
+    }
+    throw error;
+  }
+
   if (!row) {
     // Generic — doesn't distinguish "no such transaction" from "belongs to
     // a different organization". See server/services/transactions.ts.
@@ -107,14 +167,20 @@ export async function updateTransactionAction(
     userId: session.userId,
     entityType: "transaction",
     entityId: row.id,
+    metadata: before ? { changes: diffTransaction(before, row) } : undefined,
   });
 
   revalidatePath("/transactions");
+  revalidatePath("/dashboard");
   return { success: true };
 }
 
 export async function deleteTransactionAction(id: string): Promise<void> {
   const session = await verifySession();
+
+  if (!canWriteTransactions(session.role)) {
+    return;
+  }
 
   const row = await deleteTransaction(session.organizationId, id);
   if (!row) {
@@ -135,10 +201,13 @@ export async function deleteTransactionAction(id: string): Promise<void> {
       date: row.date,
       amount: row.amount,
       currency: row.currency,
+      baseAmount: row.baseAmount,
+      baseCurrency: row.baseCurrency,
       type: row.type,
       category: row.category,
     },
   });
 
   revalidatePath("/transactions");
+  revalidatePath("/dashboard");
 }

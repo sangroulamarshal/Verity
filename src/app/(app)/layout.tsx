@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { organizations } from "@/db/schema";
+import { organizations, users } from "@/db/schema";
 import { verifySession } from "@/server/services/session";
 import { logoutAction } from "@/features/auth/actions";
 import { AppShell } from "@/components/app-shell";
@@ -10,14 +10,28 @@ import { AppShell } from "@/components/app-shell";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await verifySession();
 
-  const [org] = await db
-    .select({ name: organizations.name })
-    .from(organizations)
-    .where(eq(organizations.id, session.organizationId))
-    .limit(1);
+  const [[org], [user]] = await Promise.all([
+    db
+      .select({ name: organizations.name, baseCurrency: organizations.baseCurrency })
+      .from(organizations)
+      .where(eq(organizations.id, session.organizationId))
+      .limit(1),
+    db
+      .select({ fullName: users.fullName })
+      .from(users)
+      .where(eq(users.id, session.userId))
+      .limit(1),
+  ]);
 
   return (
-    <AppShell orgName={org?.name ?? "Organization"} email={session.email} logoutAction={logoutAction}>
+    <AppShell
+      orgName={org?.name ?? "Organization"}
+      email={session.email}
+      fullName={user?.fullName ?? null}
+      role={session.role}
+      displayCurrency={session.displayCurrency ?? org?.baseCurrency ?? "GBP"}
+      logoutAction={logoutAction}
+    >
       {children}
     </AppShell>
   );

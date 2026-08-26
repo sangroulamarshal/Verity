@@ -28,12 +28,24 @@ export function formatCurrency(amount: string | number, currency: string): strin
   }
 }
 
-/** Formats a `YYYY-MM-DD` date string for display, in a fixed locale-agnostic
- * numeric form so table columns line up. Returns the input unchanged if it
- * isn't well-formed, rather than guessing. */
-export function formatDate(isoDate: string): string {
+/** Formats a `YYYY-MM-DD` date string for display. Returns the input
+ * unchanged if it isn't well-formed, rather than guessing. `format`
+ * defaults to the UK-conventional DD/MM/YYYY but can be overridden with
+ * the org member's own preference (Settings > Preferences). */
+export function formatDate(
+  isoDate: string,
+  format: "DD/MM/YYYY" | "MM/DD/YYYY" | "YYYY-MM-DD" = "DD/MM/YYYY"
+): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
   if (!match) return isoDate;
   const [, year, month, day] = match;
-  return `${day}/${month}/${year}`;
+  switch (format) {
+    case "MM/DD/YYYY":
+      return `${month}/${day}/${year}`;
+    case "YYYY-MM-DD":
+      return `${year}-${month}-${day}`;
+    case "DD/MM/YYYY":
+    default:
+      return `${day}/${month}/${year}`;
+  }
 }

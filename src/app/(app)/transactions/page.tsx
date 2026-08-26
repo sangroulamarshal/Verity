@@ -1,24 +1,66 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { verifySession } from "@/server/services/session";
 import { listTransactions } from "@/server/services/transactions";
+import { getOrganization } from "@/server/services/organizations";
+import { getUserById } from "@/server/services/account";
+import { preferencesSchema, DEFAULT_PREFERENCES } from "@/features/settings/preferences/schema";
+import { withDisplayAmounts } from "@/features/transactions/display-currency";
+import { canWriteTransactions } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { TransactionDialog } from "@/features/transactions/transaction-dialog";
 import { TransactionsTable } from "@/features/transactions/transactions-table";
+import { TransactionTabs } from "@/features/transactions/transaction-tabs";
+import { TransactionFilters } from "@/features/transactions/transaction-filters";
 
 export const metadata: Metadata = {
   title: "Transactions",
 };
 
+function firstParam(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
 export default async function TransactionsPage(props: PageProps<"/transactions">) {
   const session = await verifySession();
-  const { page: pageParam } = await props.searchParams;
-  const page = Math.max(1, Number(Array.isArray(pageParam) ? pageParam[0] : pageParam) || 1);
+  const searchParams = await props.searchParams;
+
+  const page = Math.max(1, Number(firstParam(searchParams.page)) || 1);
+  const type = firstParam(searchParams.type);
+
+  const user = await getUserById(session.userId);
+  const parsedPrefs = preferencesSchema.safeParse(user?.preferences ?? {});
+  const preferences = parsedPrefs.success ? parsedPrefs.data : DEFAULT_PREFERENCES;
+
+  // No explicit `type`/`search`/filter in the URL yet — apply the
+  // person's "default transaction view" preference (brief section 39) by
+  // redirecting once, so the tab that opens matches what they asked for
+  // without silently filtering behind their back on every visit.
+  if (type === undefined && Object.keys(searchParams).length === 0 && preferences.defaultTransactionView !== "ALL") {
+    redirect(`/transactions?type=${preferences.defaultTransactionView}`);
+  }
+
+  const typeFilter = type === "INCOME" || type === "EXPENSE" ? type : undefined;
+
+  const [organization, canEdit] = [
+    await getOrganization(session.organizationId),
+    canWriteTransactions(session.role),
+  ];
+  const displayCurrency = session.displayCurrency ?? organization?.baseCurrency ?? "GBP";
 
   const { rows, total, totalPages } = await listTransactions(session.organizationId, {
     page,
+    type: typeFilter,
+    search: firstParam(searchParams.search),
+    currency: firstParam(searchParams.currency),
+    paymentMethod: firstParam(searchParams.paymentMethod),
+    dateFrom: firstParam(searchParams.dateFrom),
+    dateTo: firstParam(searchParams.dateTo),
   });
+
+  const rowsWithDisplay = await withDisplayAmounts(rows, displayCurrency);
 
   return (
     <div className="mx-auto w-full max-w-7xl px-6 py-8 md:px-10">
@@ -29,15 +71,23 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
             {total} transaction{total === 1 ? "" : "s"} recorded.
           </p>
         </div>
-        <TransactionDialog
-          mode="create"
-          trigger={<Button type="button">New transaction</Button>}
-        />
+        {canEdit && (
+          <TransactionDialog
+            mode="create"
+            trigger={<Button type="button">New transaction</Button>}
+          />
+        )}
       </div>
 
-      <Card>
+      <Card className="overflow-hidden py-0">
+        <TransactionTabs />
+        <TransactionFilters />
         <CardContent className="p-0">
-          <TransactionsTable transactions={rows} />
+          <TransactionsTable
+            transactions={rowsWithDisplay}
+            canEdit={canEdit}
+            dateFormat={preferences.dateFormat}
+          />
         </CardContent>
       </Card>
 
@@ -49,7 +99,9 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
           <div className="flex gap-2">
             {page > 1 ? (
               <Button asChild variant="outline" size="sm">
-                <Link href={`/transactions?page=${page - 1}`}>Previous</Link>
+                <Link href={`/transactions?page=${page - 1}${type ? `&type=${type}` : ""}`}>
+                  Previous
+                </Link>
               </Button>
             ) : (
               <Button variant="outline" size="sm" disabled>
@@ -58,7 +110,9 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
             )}
             {page < totalPages ? (
               <Button asChild variant="outline" size="sm">
-                <Link href={`/transactions?page=${page + 1}`}>Next</Link>
+                <Link href={`/transactions?page=${page + 1}${type ? `&type=${type}` : ""}`}>
+                  Next
+                </Link>
               </Button>
             ) : (
               <Button variant="outline" size="sm" disabled>

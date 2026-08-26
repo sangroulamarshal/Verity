@@ -24,16 +24,28 @@
 :root {
   --radius: 0.375rem; /* restrained radius — not the rounded-2xl default */
 
-  --background: #f7f8fa;
+  --background: #f5f6f8;
   --foreground: #111827;
 
   --card: #ffffff;
   --card-foreground: #111827;
 
+  /* Sidebar is its own surface token, not an alias for --card — in light
+     mode both happen to be white, but dark mode needs them to diverge
+     (see .dark below) for the section-hierarchy the brief asks for. */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #111827;
+
+  /* A step above --card, for panels-within-panels (e.g. the FX preview
+     box inside the transaction form) that need to read as "elevated"
+     without reaching for a shadow. */
+  --elevated: #f9fafb;
+
   --popover: #ffffff;
   --popover-foreground: #111827;
 
-  --primary: #4f46e5;
+  --primary: #4338ca;
+  --primary-hover: #3730a3;
   --primary-foreground: #f8fafc;
 
   --secondary: #f1f5f9;
@@ -48,9 +60,9 @@
   --destructive: #dc2626;
   --destructive-foreground: #f8fafc;
 
-  --border: #e5e7eb;
-  --input: #e5e7eb;
-  --ring: #4f46e5;
+  --border: #d9dee7;
+  --input: #d9dee7;
+  --ring: #4338ca;
 
   /* Risk & anomaly severity scale (semantic, not decorative) */
   --risk-low: #16a34a;
@@ -66,33 +78,44 @@
 }
 
 .dark {
-  --background: #080b12;
-  --foreground: #f8fafc;
+  --background: #090c12;
+  --foreground: #f3f4f6;
 
   --card: #111827;
-  --card-foreground: #f8fafc;
+  --card-foreground: #f3f4f6;
+
+  /* Deliberately darker than --card (not an alias) — this is the fix for
+     "sections visually blend together" (brief section 7): the sidebar
+     needs to read as a distinct plane from the cards sitting on top of
+     the page background, and in dark mode equal-lightness surfaces are
+     the main reason that hierarchy collapses. */
+  --sidebar: #0d1117;
+  --sidebar-foreground: #f3f4f6;
+
+  --elevated: #172033;
 
   --popover: #111827;
-  --popover-foreground: #f8fafc;
+  --popover-foreground: #f3f4f6;
 
-  --primary: #6366f1;
-  --primary-foreground: #f8fafc;
+  --primary: #818cf8;
+  --primary-hover: #a5b4fc;
+  --primary-foreground: #0d1117;
 
   --secondary: #1e293b;
-  --secondary-foreground: #f8fafc;
+  --secondary-foreground: #f3f4f6;
 
   --muted: #1e293b;
-  --muted-foreground: #94a3b8;
+  --muted-foreground: #9ca3af;
 
-  --accent: #1e1b4b;
+  --accent: #1b2440;
   --accent-foreground: #a5b4fc;
 
   --destructive: #f87171;
-  --destructive-foreground: #080b12;
+  --destructive-foreground: #090c12;
 
-  --border: #273449;
-  --input: #273449;
-  --ring: #6366f1;
+  --border: #263244;
+  --input: #263244;
+  --ring: #818cf8;
 
   --risk-low: #4ade80;
   --risk-medium: #fbbf24;
@@ -108,9 +131,13 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-elevated: var(--elevated);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);

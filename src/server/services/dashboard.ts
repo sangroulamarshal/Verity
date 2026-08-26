@@ -20,11 +20,6 @@ export interface DashboardSummary {
   monthlyTotals: MonthlyTotal[];
   /** Most recent transactions, for the dashboard's activity list. */
   recentTransactions: (typeof transactions.$inferSelect)[];
-  /** Currency of the most recent transaction, used to label the summary
-   *  cards. Single-currency orgs (the common case) get a clean "NPR 1,240,500"
-   *  style figure; mixed-currency orgs still get a correct sum, just
-   *  without a single currency symbol attached (see dashboard page). */
-  primaryCurrency: string | null;
 }
 
 const MONTHS_OF_HISTORY = 6;
@@ -34,12 +29,20 @@ const MONTHS_OF_HISTORY = 6;
  * organization has no transactions yet, every total is legitimately zero
  * and the dashboard's empty state communicates that directly rather than
  * inventing sample figures.
+ *
+ * Sums `baseAmount` (the organization-base-currency snapshot), never
+ * `amount` (the original per-transaction currency) — summing `amount`
+ * across transactions recorded in different currencies would silently
+ * add USD figures to NPR figures as if they were the same unit (brief
+ * section 30 is explicit that this must never happen). `baseAmount` is
+ * already expressed in one common currency for every row, so a plain SQL
+ * sum is correct here without any conversion at query time.
  */
 export async function getDashboardSummary(organizationId: string): Promise<DashboardSummary> {
   const [totalsRow] = await db
     .select({
-      totalIncome: sql<string>`coalesce(sum(${transactions.amount}) filter (where ${transactions.type} = 'INCOME'), 0)`,
-      totalExpense: sql<string>`coalesce(sum(${transactions.amount}) filter (where ${transactions.type} = 'EXPENSE'), 0)`,
+      totalIncome: sql<string>`coalesce(sum(${transactions.baseAmount}) filter (where ${transactions.type} = 'INCOME'), 0)`,
+      totalExpense: sql<string>`coalesce(sum(${transactions.baseAmount}) filter (where ${transactions.type} = 'EXPENSE'), 0)`,
       transactionCount: sql<string>`count(*)`,
     })
     .from(transactions)
@@ -48,8 +51,8 @@ export async function getDashboardSummary(organizationId: string): Promise<Dashb
   const monthlyRows = await db
     .select({
       month: sql<string>`to_char(${transactions.date}, 'YYYY-MM')`,
-      income: sql<string>`coalesce(sum(${transactions.amount}) filter (where ${transactions.type} = 'INCOME'), 0)`,
-      expense: sql<string>`coalesce(sum(${transactions.amount}) filter (where ${transactions.type} = 'EXPENSE'), 0)`,
+      income: sql<string>`coalesce(sum(${transactions.baseAmount}) filter (where ${transactions.type} = 'INCOME'), 0)`,
+      expense: sql<string>`coalesce(sum(${transactions.baseAmount}) filter (where ${transactions.type} = 'EXPENSE'), 0)`,
     })
     .from(transactions)
     .where(eq(transactions.organizationId, organizationId))
@@ -80,6 +83,5 @@ export async function getDashboardSummary(organizationId: string): Promise<Dashb
       }))
       .reverse(),
     recentTransactions,
-    primaryCurrency: recentTransactions[0]?.currency ?? null,
   };
 }

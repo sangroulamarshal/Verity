@@ -7,7 +7,7 @@ import {
   LayoutDashboard,
   ArrowLeftRight,
   Upload,
-  LogOut,
+  Settings as SettingsIcon,
   Menu,
   X,
 } from "lucide-react";
@@ -15,6 +15,9 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { CurrencySelector } from "@/components/currency-selector";
+import { UserMenu } from "@/components/user-menu";
+import { ROLE_LABELS, type UserRole } from "@/lib/permissions";
 
 interface NavItem {
   href: string;
@@ -22,13 +25,20 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-// Only routes that exist today. Risk / Cash Flow / Customers are not in
-// this list on purpose — they don't have pages yet (see README phase
-// table), and a nav item that 404s is worse than no nav item.
-const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
-  { href: "/imports", label: "Imports", icon: Upload },
+interface NavGroup {
+  label: string | null;
+  items: NavItem[];
+}
+
+// Only routes that exist today. Risk / Cash Flow / Customers have no
+// section here on purpose — they don't have pages yet (see README phase
+// table), and a nav item that 404s, or worse, opens a page full of
+// invented numbers, is worse than no nav item at all.
+const NAV_GROUPS: NavGroup[] = [
+  { label: null, items: [{ href: "/dashboard", label: "Overview", icon: LayoutDashboard }] },
+  { label: "Business", items: [{ href: "/transactions", label: "Transactions", icon: ArrowLeftRight }] },
+  { label: "Data", items: [{ href: "/imports", label: "Imports", icon: Upload }] },
+  { label: "System", items: [{ href: "/settings/account", label: "Settings", icon: SettingsIcon }] },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -37,67 +47,109 @@ function isActive(pathname: string, href: string) {
 
 function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   return (
-    <nav className="flex flex-col gap-0.5 px-3">
-      {NAV_ITEMS.map((item) => {
-        const active = isActive(pathname, item.href);
-        const Icon = item.icon;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onNavigate}
-            aria-current={active ? "page" : undefined}
-            className={cn(
-              "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
-              active
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-            )}
-          >
-            <Icon className="size-4 shrink-0" />
-            {item.label}
-          </Link>
-        );
-      })}
+    <nav className="flex flex-col gap-4 px-3">
+      {NAV_GROUPS.map((group, index) => (
+        <div key={group.label ?? `group-${index}`} className="flex flex-col gap-0.5">
+          {group.label && (
+            <p className="px-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              {group.label}
+            </p>
+          )}
+          {group.items.map((item) => {
+            const active = isActive(pathname, item.href);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onNavigate}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "group relative flex items-center gap-2.5 rounded-md py-2 pl-3.5 pr-2.5 text-sm font-medium transition-colors",
+                  active
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                )}
+              >
+                {/* Thin active indicator — never relies on text color alone
+                    (brief section 4). */}
+                <span
+                  className={cn(
+                    "absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-primary transition-opacity",
+                    active ? "opacity-100" : "opacity-0"
+                  )}
+                  aria-hidden
+                />
+                <Icon
+                  className={cn(
+                    "size-4 shrink-0 transition-colors",
+                    active ? "text-primary" : "text-muted-foreground/80 group-hover:text-foreground"
+                  )}
+                />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
     </nav>
   );
 }
 
 function Brand() {
   return (
-    <Link href="/dashboard" className="flex items-center gap-2 px-3">
-      <span className="flex size-6 items-center justify-center rounded-md bg-primary text-[13px] font-semibold text-primary-foreground">
+    <Link href="/dashboard" className="flex items-center gap-2.5 px-3">
+      <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-base font-bold text-primary-foreground">
         V
       </span>
-      <span className="text-sm font-semibold tracking-tight">Verity</span>
+      <span className="text-base font-semibold tracking-tight">Verity</span>
     </Link>
+  );
+}
+
+function OrgBox({ orgName, role }: { orgName: string; role: UserRole }) {
+  return (
+    <div className="rounded-md border border-border bg-secondary/50 px-2.5 py-2">
+      <p className="truncate text-xs font-medium text-foreground">{orgName}</p>
+      <p className="truncate text-xs text-muted-foreground">{ROLE_LABELS[role]}</p>
+    </div>
   );
 }
 
 interface AppShellProps {
   orgName: string;
   email: string;
+  fullName: string | null;
+  role: UserRole;
+  displayCurrency: string;
   logoutAction: () => void | Promise<void>;
   children: React.ReactNode;
 }
 
-export function AppShell({ orgName, email, logoutAction, children }: AppShellProps) {
+export function AppShell({
+  orgName,
+  email,
+  fullName,
+  role,
+  displayCurrency,
+  logoutAction,
+  children,
+}: AppShellProps) {
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
 
   return (
     <div className="flex h-dvh overflow-hidden">
-      {/* Desktop sidebar */}
-      <aside className="hidden w-56 shrink-0 flex-col overflow-y-auto border-r border-border bg-card py-4 md:flex">
-        <div className="mb-6">
+      {/* Desktop sidebar — bg-sidebar, a distinct surface from bg-card so
+          the sidebar reads as its own plane rather than blending into the
+          cards sitting in the main column (brief section 7). */}
+      <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-sidebar py-5 text-sidebar-foreground md:flex">
+        <div className="mb-7">
           <Brand />
         </div>
         <NavLinks pathname={pathname} />
         <div className="mt-auto px-3 pt-4">
-          <div className="rounded-md border border-border bg-secondary/50 px-2.5 py-2">
-            <p className="truncate text-xs font-medium text-foreground">{orgName}</p>
-            <p className="truncate text-xs text-muted-foreground">{email}</p>
-          </div>
+          <OrgBox orgName={orgName} role={role} />
         </div>
       </aside>
 
@@ -110,8 +162,8 @@ export function AppShell({ orgName, email, logoutAction, children }: AppShellPro
             className="absolute inset-0 bg-foreground/20"
             onClick={() => setMobileNavOpen(false)}
           />
-          <aside className="relative flex h-full w-64 flex-col border-r border-border bg-card py-4">
-            <div className="mb-6 flex items-center justify-between px-3">
+          <aside className="relative flex h-full w-64 flex-col border-r border-border bg-sidebar py-5 text-sidebar-foreground">
+            <div className="mb-7 flex items-center justify-between px-3">
               <Brand />
               <Button
                 type="button"
@@ -125,10 +177,7 @@ export function AppShell({ orgName, email, logoutAction, children }: AppShellPro
             </div>
             <NavLinks pathname={pathname} onNavigate={() => setMobileNavOpen(false)} />
             <div className="mt-auto px-3 pt-4">
-              <div className="rounded-md border border-border bg-secondary/50 px-2.5 py-2">
-                <p className="truncate text-xs font-medium text-foreground">{orgName}</p>
-                <p className="truncate text-xs text-muted-foreground">{email}</p>
-              </div>
+              <OrgBox orgName={orgName} role={role} />
             </div>
           </aside>
         </div>
@@ -136,7 +185,7 @@ export function AppShell({ orgName, email, logoutAction, children }: AppShellPro
 
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4 md:px-6">
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-4 md:px-6">
           <Button
             type="button"
             variant="ghost"
@@ -150,16 +199,12 @@ export function AppShell({ orgName, email, logoutAction, children }: AppShellPro
 
           <div className="flex-1" />
 
+          <CurrencySelector value={displayCurrency} />
           <ThemeToggle />
-          <form action={logoutAction}>
-            <Button type="submit" variant="ghost" size="sm" className="gap-1.5">
-              <LogOut className="size-4" />
-              Log out
-            </Button>
-          </form>
+          <UserMenu email={email} fullName={fullName} role={role} logoutAction={logoutAction} />
         </header>
 
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-background">{children}</main>
       </div>
     </div>
   );

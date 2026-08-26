@@ -3,15 +3,18 @@ import { organizations } from "./organizations";
 import { users } from "./users";
 import { auditLogs } from "./audit-logs";
 import { transactions } from "./transactions";
+import { transactionPresets } from "./transaction-presets";
+import { organizationInvites } from "./organization-invites";
 import { imports, importMappings } from "./imports";
 
-export const organizationsRelations = relations(organizations, ({ one, many }) => ({
-  user: one(users, {
-    fields: [organizations.id],
-    references: [users.organizationId],
-  }),
+export const organizationsRelations = relations(organizations, ({ many }) => ({
+  // Was `one(users, ...)` — organizations now have many users (Members),
+  // not exactly one, now that users.organizationId is no longer unique.
+  users: many(users),
   auditLogs: many(auditLogs),
   transactions: many(transactions),
+  transactionPresets: many(transactionPresets),
+  invites: many(organizationInvites),
   imports: many(imports),
 }));
 
@@ -19,6 +22,29 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
   organization: one(organizations, {
     fields: [transactions.organizationId],
     references: [organizations.id],
+  }),
+  preset: one(transactionPresets, {
+    fields: [transactions.presetId],
+    references: [transactionPresets.id],
+  }),
+}));
+
+export const transactionPresetsRelations = relations(transactionPresets, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [transactionPresets.organizationId],
+    references: [organizations.id],
+  }),
+  transactions: many(transactions),
+}));
+
+export const organizationInvitesRelations = relations(organizationInvites, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [organizationInvites.organizationId],
+    references: [organizations.id],
+  }),
+  invitedBy: one(users, {
+    fields: [organizationInvites.invitedByUserId],
+    references: [users.id],
   }),
 }));
 

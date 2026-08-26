@@ -9,6 +9,8 @@ import { parseImportFile, ImportFileError } from "./parse";
 import { suggestColumnMapping } from "@/server/engines/column-detection";
 import { normalizeRows, validateColumnMapping } from "@/server/engines/normalization";
 import { flagExistingDuplicates, commitImport } from "@/server/services/imports";
+import { getOrganization } from "@/server/services/organizations";
+import { FxRateUnavailableError } from "@/server/services/fx";
 import { columnMappingSchema, currencySchema } from "./schema";
 import type {
   ColumnMappingEntry,
@@ -219,16 +221,32 @@ export async function commitImportAction(formData: FormData): Promise<CommitImpo
     };
   }
 
-  const importRow = await commitImport(session.organizationId, session.userId, {
-    filename: file.name,
-    source: sourceFromFilename(file.name),
-    mapping,
-    rowsToInsert,
-    totalRowCount: normalized.totalRows,
-    invalidRowCount: normalized.invalid.length,
-    validRowCount: trulyValid.length + allDuplicates.length,
-    duplicateRowCount: allDuplicates.length,
-  });
+  const organization = await getOrganization(session.organizationId);
+  const baseCurrency = organization?.baseCurrency ?? "GBP";
+
+  let importRow;
+  try {
+    importRow = await commitImport(session.organizationId, baseCurrency, session.userId, {
+      filename: file.name,
+      source: sourceFromFilename(file.name),
+      mapping,
+      rowsToInsert,
+      totalRowCount: normalized.totalRows,
+      invalidRowCount: normalized.invalid.length,
+      validRowCount: trulyValid.length + allDuplicates.length,
+      duplicateRowCount: allDuplicates.length,
+    });
+  } catch (error) {
+    if (error instanceof FxRateUnavailableError) {
+      // Never silently save a guessed conversion (brief section 25) —
+      // nothing was written (commitImport's insert is inside a single DB
+      // transaction), so this is safe to just ask the person to retry.
+      return {
+        error: `Could not convert this batch to ${baseCurrency}: exchange rate for ${error.sourceCurrency} \u2192 ${error.targetCurrency} is unavailable right now. Please try again shortly.`,
+      };
+    }
+    throw error;
+  }
 
   await auditLogSafely({
     action: "IMPORT_COMMITTED",
