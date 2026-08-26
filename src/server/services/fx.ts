@@ -154,7 +154,25 @@ async function fetchAndCacheRate(source: string, target: string): Promise<Exchan
     throw new FxRateUnavailableError(source, target, error);
   }
 
-  await upsertCachedRate(source, target, result);
+  // Deliberately outside the try/catch above: a genuinely-fetched rate
+  // must never be discarded because of a *caching* problem. Previously
+  // this call sat unguarded after the try/catch, so any failure here
+  // (a DB blip, a constraint issue) surfaced as a raw, uncaught error
+  // to the caller instead of the FxRateUnavailableError contract every
+  // caller in this codebase is written to expect — which is how a
+  // transaction save could fail completely silently even though a
+  // valid rate had already been obtained. Caching is an optimization
+  // (saves the next lookup a network round-trip); it must never be
+  // able to fail the transaction it was only trying to speed up.
+  try {
+    await upsertCachedRate(source, target, result);
+  } catch (error) {
+    console.error(
+      `[fx] Failed to cache rate ${source}\u2192${target}; proceeding with the rate already fetched.`,
+      error
+    );
+  }
+
   return result;
 }
 

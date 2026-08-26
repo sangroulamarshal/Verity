@@ -99,7 +99,18 @@ export async function createTransactionAction(
     if (error instanceof FxRateUnavailableError) {
       return { message: fxErrorMessage(error, baseCurrency), values: rawFormValues(formData) };
     }
-    throw error;
+    // Anything else (DB error, unexpected exception) used to be
+    // rethrown uncaught here. With useActionState, an action that
+    // rejects instead of resolving leaves `pending` reset to false but
+    // never updates `state` — so the button just flips back to "Add
+    // transaction" with no error visible anywhere. Logging with a
+    // greppable tag and returning a real message fixes that silence
+    // for every future failure mode, not just the one we've seen.
+    console.error("[transactions] createTransactionAction failed unexpectedly:", error);
+    return {
+      message: "Something went wrong saving this transaction. Please try again.",
+      values: rawFormValues(formData),
+    };
   }
 
   await auditLogSafely({
@@ -152,7 +163,12 @@ export async function updateTransactionAction(
     if (error instanceof FxRateUnavailableError) {
       return { message: fxErrorMessage(error, baseCurrency), values: rawFormValues(formData) };
     }
-    throw error;
+    // See the matching comment in createTransactionAction above.
+    console.error("[transactions] updateTransactionAction failed unexpectedly:", error);
+    return {
+      message: "Something went wrong saving this transaction. Please try again.",
+      values: rawFormValues(formData),
+    };
   }
 
   if (!row) {
