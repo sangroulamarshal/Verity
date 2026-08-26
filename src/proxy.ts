@@ -11,7 +11,7 @@ import { createServerClient } from "@supabase/ssr";
 // deeper in the request. In practice this call is fast and Supabase
 // fronts it with its own caching, but it's no longer "no network call in
 // middleware" the way the old cookie-presence check was.
-const PROTECTED_PREFIXES = ["/dashboard", "/transactions", "/imports"];
+const PROTECTED_PREFIXES = ["/dashboard", "/transactions", "/imports", "/settings"];
 const AUTH_PAGES = ["/login", "/register"];
 
 export default async function proxy(request: NextRequest) {
