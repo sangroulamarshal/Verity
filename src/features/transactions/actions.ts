@@ -16,7 +16,7 @@ import { transactionSchema } from "./schema";
 import { diffTransaction } from "./audit-diff";
 
 export interface TransactionFormState {
-  errors?: Record<string, string[]>;
+  errors?: Record<string, string[] | undefined>;
   message?: string;
   success?: boolean;
   /**
@@ -41,17 +41,32 @@ export interface TransactionFormState {
 }
 
 function parseTransactionFormData(formData: FormData) {
+  // FormData.get() returns null for a field that isn't in the form at
+  // all — distinct from "" for a field that's present but empty. Every
+  // optional-field schema below (optionalText, the paymentMethod enum)
+  // only treats undefined/"" as "not provided" via .optional().or(z.literal("")) —
+  // neither accepts a bare null, so it fails type validation outright.
+  // presetId's hidden input is only rendered when creating from a
+  // preset (see transaction-form.tsx), so a plain "Add transaction"
+  // submits with no presetId field at all: formData.get("presetId")
+  // was null, every one of those submissions failed validation with
+  // {"presetId":["Invalid input"]} — a real, correctly-returned error
+  // that the form has no visible slot to display, since presetId isn't
+  // a rendered form control. Normalizing null -> "" here fixes the
+  // actual field and guards every other optional field the same way,
+  // so no future conditionally-rendered field can hit this silently.
+  const get = (name: string) => formData.get(name) ?? "";
   return transactionSchema.safeParse({
-    date: formData.get("date"),
-    amount: formData.get("amount"),
-    currency: formData.get("currency"),
-    type: formData.get("type"),
-    category: formData.get("category"),
-    counterparty: formData.get("counterparty"),
-    paymentMethod: formData.get("paymentMethod"),
-    description: formData.get("description"),
-    referenceId: formData.get("referenceId"),
-    presetId: formData.get("presetId"),
+    date: get("date"),
+    amount: get("amount"),
+    currency: get("currency"),
+    type: get("type"),
+    category: get("category"),
+    counterparty: get("counterparty"),
+    paymentMethod: get("paymentMethod"),
+    description: get("description"),
+    referenceId: get("referenceId"),
+    presetId: get("presetId"),
   });
 }
 
@@ -95,6 +110,48 @@ function isFrameworkControlFlowError(error: unknown): boolean {
   );
 }
 
+// Every field the form actually renders a {state.errors?.x && <p>...}
+// block for. presetId is deliberately absent — it's a hidden field
+// with no visible slot to show an error in (see transaction-form.tsx).
+// This is what let the null/undefined presetId bug above produce a
+// correctly-returned error that was nonetheless invisible to the
+// person using the form.
+const FIELDS_WITH_VISIBLE_ERRORS = new Set([
+  "date",
+  "amount",
+  "currency",
+  "type",
+  "category",
+  "counterparty",
+  "paymentMethod",
+  "description",
+  "referenceId",
+]);
+
+/**
+ * A validation failure always gets its errors returned, but a field
+ * error the form has no visible slot for is otherwise silent — exactly
+ * how the presetId bug above went unnoticed. Falling back to a
+ * top-of-form message whenever that happens means any future field
+ * with the same gap fails loudly instead of quietly, without needing
+ * every new field to remember to wire up its own error display.
+ */
+function validationFailureState(
+  errors: Record<string, string[] | undefined>,
+  formData: FormData
+): TransactionFormState {
+  const hasInvisibleFieldError = Object.keys(errors).some(
+    (field) => !FIELDS_WITH_VISIBLE_ERRORS.has(field)
+  );
+  return {
+    errors,
+    values: rawFormValues(formData),
+    message: hasInvisibleFieldError
+      ? "This transaction couldn't be validated. Please try again, and let us know if this keeps happening."
+      : undefined,
+  };
+}
+
 export async function createTransactionAction(
   _prevState: TransactionFormState | undefined,
   formData: FormData
@@ -108,7 +165,7 @@ export async function createTransactionAction(
 
     const parsed = parseTransactionFormData(formData);
     if (!parsed.success) {
-      return { errors: parsed.error.flatten().fieldErrors, values: rawFormValues(formData) };
+      return validationFailureState(parsed.error.flatten().fieldErrors, formData);
     }
 
     const organization = await getOrganization(session.organizationId);
@@ -178,7 +235,7 @@ export async function updateTransactionAction(
 
     const parsed = parseTransactionFormData(formData);
     if (!parsed.success) {
-      return { errors: parsed.error.flatten().fieldErrors, values: rawFormValues(formData) };
+      return validationFailureState(parsed.error.flatten().fieldErrors, formData);
     }
 
     const organization = await getOrganization(session.organizationId);
