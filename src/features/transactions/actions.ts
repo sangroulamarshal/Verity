@@ -74,65 +74,94 @@ function fxErrorMessage(error: FxRateUnavailableError, baseCurrency: string): st
   return `Could not convert to ${baseCurrency}: exchange rate for ${error.sourceCurrency} \u2192 ${error.targetCurrency} is unavailable right now. Please try again shortly.`;
 }
 
+/**
+ * Next.js implements redirect()/notFound() by throwing a special error
+ * with a `digest` starting with "NEXT_REDIRECT"/"NEXT_HTTP_ERROR_FALLBACK"
+ * — the framework's documented way of distinguishing these from real
+ * errors when wrapping server code in a broad try/catch. verifySession()
+ * calls redirect("/login") internally; a catch-all around it must let
+ * that specific throw continue upward untouched; treating a real login
+ * redirect as "something went wrong" would trap a logged-out user on a
+ * broken form instead of sending them to /login.
+ */
+function isFrameworkControlFlowError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    typeof (error as { digest?: unknown }).digest === "string" &&
+    ((error as { digest: string }).digest.startsWith("NEXT_REDIRECT") ||
+      (error as { digest: string }).digest.startsWith("NEXT_HTTP_ERROR_FALLBACK"))
+  );
+}
+
 export async function createTransactionAction(
   _prevState: TransactionFormState | undefined,
   formData: FormData
 ): Promise<TransactionFormState> {
-  const session = await verifySession();
-
-  if (!canWriteTransactions(session.role)) {
-    return { message: "Your role doesn't have permission to add transactions." };
-  }
-
-  const parsed = parseTransactionFormData(formData);
-  if (!parsed.success) {
-    return { errors: parsed.error.flatten().fieldErrors, values: rawFormValues(formData) };
-  }
-
-  const organization = await getOrganization(session.organizationId);
-  const baseCurrency = organization?.baseCurrency ?? "GBP";
-
-  let row;
   try {
-    row = await createTransaction(session.organizationId, baseCurrency, parsed.data);
-  } catch (error) {
-    if (error instanceof FxRateUnavailableError) {
-      return { message: fxErrorMessage(error, baseCurrency), values: rawFormValues(formData) };
+    const session = await verifySession();
+
+    if (!canWriteTransactions(session.role)) {
+      return { message: "Your role doesn't have permission to add transactions." };
     }
-    // Anything else (DB error, unexpected exception) used to be
-    // rethrown uncaught here. With useActionState, an action that
-    // rejects instead of resolving leaves `pending` reset to false but
-    // never updates `state` — so the button just flips back to "Add
-    // transaction" with no error visible anywhere. Logging with a
-    // greppable tag and returning a real message fixes that silence
-    // for every future failure mode, not just the one we've seen.
+
+    const parsed = parseTransactionFormData(formData);
+    if (!parsed.success) {
+      return { errors: parsed.error.flatten().fieldErrors, values: rawFormValues(formData) };
+    }
+
+    const organization = await getOrganization(session.organizationId);
+    const baseCurrency = organization?.baseCurrency ?? "GBP";
+
+    let row;
+    try {
+      row = await createTransaction(session.organizationId, baseCurrency, parsed.data);
+    } catch (error) {
+      if (error instanceof FxRateUnavailableError) {
+        return { message: fxErrorMessage(error, baseCurrency), values: rawFormValues(formData) };
+      }
+      // Not FX-specific — fall through to the outer catch below, which
+      // logs it and returns a generic message rather than crashing.
+      throw error;
+    }
+
+    await auditLogSafely({
+      action: "TRANSACTION_CREATED",
+      organizationId: session.organizationId,
+      userId: session.userId,
+      entityType: "transaction",
+      entityId: row.id,
+      metadata: {
+        date: row.date,
+        amount: row.amount,
+        currency: row.currency,
+        baseAmount: row.baseAmount,
+        baseCurrency: row.baseCurrency,
+        type: row.type,
+        category: row.category,
+      },
+    });
+
+    revalidatePath("/transactions");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (error) {
+    if (isFrameworkControlFlowError(error)) throw error;
+    // Previously only the createTransaction() insert itself was
+    // guarded. verifySession() and getOrganization() run before that,
+    // and revalidatePath() after it — any of those throwing was still
+    // uncaught, which is how this could still fail silently even with
+    // the insert-specific guard in place. Wrapping the whole body
+    // closes every remaining gap; a rejected action otherwise leaves
+    // useActionState's `pending` reset to false with `state` never
+    // updated, so the button just resets with nothing shown.
     console.error("[transactions] createTransactionAction failed unexpectedly:", error);
     return {
       message: "Something went wrong saving this transaction. Please try again.",
       values: rawFormValues(formData),
     };
   }
-
-  await auditLogSafely({
-    action: "TRANSACTION_CREATED",
-    organizationId: session.organizationId,
-    userId: session.userId,
-    entityType: "transaction",
-    entityId: row.id,
-    metadata: {
-      date: row.date,
-      amount: row.amount,
-      currency: row.currency,
-      baseAmount: row.baseAmount,
-      baseCurrency: row.baseCurrency,
-      type: row.type,
-      category: row.category,
-    },
-  });
-
-  revalidatePath("/transactions");
-  revalidatePath("/dashboard");
-  return { success: true };
 }
 
 export async function updateTransactionAction(
@@ -140,29 +169,53 @@ export async function updateTransactionAction(
   _prevState: TransactionFormState | undefined,
   formData: FormData
 ): Promise<TransactionFormState> {
-  const session = await verifySession();
-
-  if (!canWriteTransactions(session.role)) {
-    return { message: "Your role doesn't have permission to edit transactions." };
-  }
-
-  const parsed = parseTransactionFormData(formData);
-  if (!parsed.success) {
-    return { errors: parsed.error.flatten().fieldErrors, values: rawFormValues(formData) };
-  }
-
-  const organization = await getOrganization(session.organizationId);
-  const baseCurrency = organization?.baseCurrency ?? "GBP";
-
-  const before = await getTransactionById(session.organizationId, id);
-
-  let row;
   try {
-    row = await updateTransaction(session.organizationId, baseCurrency, id, parsed.data);
-  } catch (error) {
-    if (error instanceof FxRateUnavailableError) {
-      return { message: fxErrorMessage(error, baseCurrency), values: rawFormValues(formData) };
+    const session = await verifySession();
+
+    if (!canWriteTransactions(session.role)) {
+      return { message: "Your role doesn't have permission to edit transactions." };
     }
+
+    const parsed = parseTransactionFormData(formData);
+    if (!parsed.success) {
+      return { errors: parsed.error.flatten().fieldErrors, values: rawFormValues(formData) };
+    }
+
+    const organization = await getOrganization(session.organizationId);
+    const baseCurrency = organization?.baseCurrency ?? "GBP";
+
+    const before = await getTransactionById(session.organizationId, id);
+
+    let row;
+    try {
+      row = await updateTransaction(session.organizationId, baseCurrency, id, parsed.data);
+    } catch (error) {
+      if (error instanceof FxRateUnavailableError) {
+        return { message: fxErrorMessage(error, baseCurrency), values: rawFormValues(formData) };
+      }
+      throw error;
+    }
+
+    if (!row) {
+      // Generic — doesn't distinguish "no such transaction" from "belongs
+      // to a different organization". See server/services/transactions.ts.
+      return { message: "Transaction not found.", values: rawFormValues(formData) };
+    }
+
+    await auditLogSafely({
+      action: "TRANSACTION_UPDATED",
+      organizationId: session.organizationId,
+      userId: session.userId,
+      entityType: "transaction",
+      entityId: row.id,
+      metadata: before ? { changes: diffTransaction(before, row) } : undefined,
+    });
+
+    revalidatePath("/transactions");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (error) {
+    if (isFrameworkControlFlowError(error)) throw error;
     // See the matching comment in createTransactionAction above.
     console.error("[transactions] updateTransactionAction failed unexpectedly:", error);
     return {
@@ -170,25 +223,6 @@ export async function updateTransactionAction(
       values: rawFormValues(formData),
     };
   }
-
-  if (!row) {
-    // Generic — doesn't distinguish "no such transaction" from "belongs to
-    // a different organization". See server/services/transactions.ts.
-    return { message: "Transaction not found.", values: rawFormValues(formData) };
-  }
-
-  await auditLogSafely({
-    action: "TRANSACTION_UPDATED",
-    organizationId: session.organizationId,
-    userId: session.userId,
-    entityType: "transaction",
-    entityId: row.id,
-    metadata: before ? { changes: diffTransaction(before, row) } : undefined,
-  });
-
-  revalidatePath("/transactions");
-  revalidatePath("/dashboard");
-  return { success: true };
 }
 
 export async function deleteTransactionAction(id: string): Promise<void> {
