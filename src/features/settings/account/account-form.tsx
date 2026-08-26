@@ -66,13 +66,30 @@ export function AccountForm({
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="displayCurrency">Default display currency</Label>
         <Select id="displayCurrency" name="displayCurrency" defaultValue={displayCurrency ?? ""}>
-          <option value="">Use organization default ({organizationBaseCurrency})</option>
+          {/*
+            The empty-value option's effective currency is always
+            organizationBaseCurrency (it's only ever selected when the
+            user has no personal override — see displayCurrency ?? ""
+            above). Labeling it with the resolved code, the same way the
+            header's CurrencySelector does, is what actually fixed the
+            "these two don't match" bug: previously this said "Use
+            organization default (GBP)" while the header just said
+            "GBP" for the exact same state, which read as disagreement
+            even though nothing was out of sync.
+          */}
+          <option value="">{organizationBaseCurrency} (organization default)</option>
           {DISPLAY_CURRENCIES.map((code) => (
             <option key={code} value={code}>
               {code}
             </option>
           ))}
         </Select>
+        {!displayCurrency && (
+          <p className="text-xs text-muted-foreground">
+            Following your organization&rsquo;s default. Pick a currency above to set a personal
+            preference instead.
+          </p>
+        )}
       </div>
 
       {state.message && <p className="text-sm text-destructive">{state.message}</p>}
