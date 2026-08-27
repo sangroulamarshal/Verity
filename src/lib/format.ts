@@ -4,6 +4,29 @@
  * (Phase 6/7) without dragging in server-only code.
  */
 
+// `Intl.NumberFormat` construction (locale/currency-data lookup) is
+// measurably more expensive than the format() call itself — constructing
+// a fresh one per call adds up fast on any page rendering a table of
+// amounts (e.g. 20-100 transaction rows x up to 2 amounts each, every
+// request). Locale is always `undefined` here (process default, stable
+// for the life of the server), so a formatter is safe to cache and reuse
+// by currency code alone — this is the standard MDN-recommended pattern
+// for repeated Intl usage.
+const currencyFormatters = new Map<string, Intl.NumberFormat>();
+
+function getCurrencyFormatter(currency: string): Intl.NumberFormat {
+  let formatter = currencyFormatters.get(currency);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      currencyDisplay: "narrowSymbol",
+    });
+    currencyFormatters.set(currency, formatter);
+  }
+  return formatter;
+}
+
 /**
  * Formats a monetary amount for display. `amount` is accepted as a string
  * because that's how it round-trips through the DB and forms without
@@ -15,15 +38,13 @@ export function formatCurrency(amount: string | number, currency: string): strin
   if (!Number.isFinite(value)) return "—";
 
   try {
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency: currency || "USD",
-      currencyDisplay: "narrowSymbol",
-    }).format(value);
+    return getCurrencyFormatter(currency || "USD").format(value);
   } catch {
     // Intl throws on a currency code it doesn't recognize (e.g. a typo
     // that slipped past the format-only regex check). Fall back to a
-    // plain number rather than crashing the row that contains it.
+    // plain number rather than crashing the row that contains it — and
+    // don't cache anything for the bad code, so a genuinely bad currency
+    // never poisons the cache for a later, valid lookup under the same key.
     return `${value.toFixed(2)} ${currency}`;
   }
 }

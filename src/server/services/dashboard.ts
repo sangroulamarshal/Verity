@@ -39,33 +39,46 @@ const MONTHS_OF_HISTORY = 6;
  * sum is correct here without any conversion at query time.
  */
 export async function getDashboardSummary(organizationId: string): Promise<DashboardSummary> {
-  const [totalsRow] = await db
-    .select({
-      totalIncome: sql<string>`coalesce(sum(${transactions.baseAmount}) filter (where ${transactions.type} = 'INCOME'), 0)`,
-      totalExpense: sql<string>`coalesce(sum(${transactions.baseAmount}) filter (where ${transactions.type} = 'EXPENSE'), 0)`,
-      transactionCount: sql<string>`count(*)`,
-    })
-    .from(transactions)
-    .where(eq(transactions.organizationId, organizationId));
-
-  const monthlyRows = await db
-    .select({
-      month: sql<string>`to_char(${transactions.date}, 'YYYY-MM')`,
-      income: sql<string>`coalesce(sum(${transactions.baseAmount}) filter (where ${transactions.type} = 'INCOME'), 0)`,
-      expense: sql<string>`coalesce(sum(${transactions.baseAmount}) filter (where ${transactions.type} = 'EXPENSE'), 0)`,
-    })
-    .from(transactions)
-    .where(eq(transactions.organizationId, organizationId))
-    .groupBy(sql`to_char(${transactions.date}, 'YYYY-MM')`)
-    .orderBy(sql`to_char(${transactions.date}, 'YYYY-MM') desc`)
-    .limit(MONTHS_OF_HISTORY);
-
-  const recentTransactions = await db
-    .select()
-    .from(transactions)
-    .where(eq(transactions.organizationId, organizationId))
-    .orderBy(desc(transactions.date), desc(transactions.createdAt))
-    .limit(5);
+  // These three queries are independent of each other (none reads a
+  // result the others produce) but were previously awaited one after
+  // another, costing three sequential round trips on every dashboard
+  // load instead of one. Running them concurrently doesn't reduce actual
+  // database work, but does let their network/round-trip latency
+  // overlap rather than stack. (Note: db/client.ts intentionally caps
+  // the pg pool at max: 1 per serverless instance to avoid exhausting
+  // Supabase's connection limit — see that file's comment. Until the
+  // project moves to Supabase's Transaction-mode pooler and can safely
+  // raise that cap, these will still queue for the single connection
+  // rather than truly run in parallel; this is still correct and
+  // strictly no slower, and is ready to benefit immediately once the
+  // pool size can go up.)
+  const [[totalsRow], monthlyRows, recentTransactions] = await Promise.all([
+    db
+      .select({
+        totalIncome: sql<string>`coalesce(sum(${transactions.baseAmount}) filter (where ${transactions.type} = 'INCOME'), 0)`,
+        totalExpense: sql<string>`coalesce(sum(${transactions.baseAmount}) filter (where ${transactions.type} = 'EXPENSE'), 0)`,
+        transactionCount: sql<string>`count(*)`,
+      })
+      .from(transactions)
+      .where(eq(transactions.organizationId, organizationId)),
+    db
+      .select({
+        month: sql<string>`to_char(${transactions.date}, 'YYYY-MM')`,
+        income: sql<string>`coalesce(sum(${transactions.baseAmount}) filter (where ${transactions.type} = 'INCOME'), 0)`,
+        expense: sql<string>`coalesce(sum(${transactions.baseAmount}) filter (where ${transactions.type} = 'EXPENSE'), 0)`,
+      })
+      .from(transactions)
+      .where(eq(transactions.organizationId, organizationId))
+      .groupBy(sql`to_char(${transactions.date}, 'YYYY-MM')`)
+      .orderBy(sql`to_char(${transactions.date}, 'YYYY-MM') desc`)
+      .limit(MONTHS_OF_HISTORY),
+    db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.organizationId, organizationId))
+      .orderBy(desc(transactions.date), desc(transactions.createdAt))
+      .limit(5),
+  ]);
 
   const totalIncome = Number(totalsRow?.totalIncome ?? 0);
   const totalExpense = Number(totalsRow?.totalExpense ?? 0);

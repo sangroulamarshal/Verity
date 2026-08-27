@@ -5,9 +5,8 @@ import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { db } from "@/db/client";
 import { organizations } from "@/db/schema";
 import { verifySession } from "@/server/services/session";
-import { getDashboardSummary, type DashboardSummary } from "@/server/services/dashboard";
-import { getExchangeRate, FxRateUnavailableError } from "@/server/services/fx";
-import { convertAmount } from "@/lib/money";
+import { getDashboardSummary } from "@/server/services/dashboard";
+import { resolveDisplaySummary } from "@/server/services/dashboard-display";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CashFlowChart } from "@/components/cash-flow-chart";
@@ -16,63 +15,6 @@ import { formatCurrency, formatDate } from "@/lib/format";
 export const metadata: Metadata = {
   title: "Overview",
 };
-
-interface DisplaySummary {
-  summary: DashboardSummary;
-  currency: string;
-  /** True when a personal display currency was requested but the rate
-   * couldn't be obtained — the caller falls back to showing the org's
-   * base currency instead, same graceful-degradation contract every
-   * other FX call site in this codebase follows (never guess a rate,
-   * never crash the page over a conversion that can't be done). */
-  rateUnavailable: boolean;
-}
-
-/**
- * Converts the dashboard's aggregate totals to the signed-in user's
- * display-currency preference. Unlike the transactions table
- * (withDisplayAmounts, which handles many distinct base currencies
- * across a page of rows), every row summed into these totals already
- * shares one currency — the organization's base currency — so this
- * only ever needs a single rate lookup, not one per row.
- */
-async function resolveDisplaySummary(
-  summary: DashboardSummary,
-  baseCurrency: string,
-  displayCurrency: string
-): Promise<DisplaySummary> {
-  if (baseCurrency.toUpperCase() === displayCurrency.toUpperCase()) {
-    return { summary, currency: baseCurrency, rateUnavailable: false };
-  }
-
-  let rate;
-  try {
-    rate = await getExchangeRate(baseCurrency, displayCurrency);
-  } catch (error) {
-    if (error instanceof FxRateUnavailableError) {
-      return { summary, currency: baseCurrency, rateUnavailable: true };
-    }
-    throw error;
-  }
-
-  const convert = (amount: number) => Number(convertAmount(amount.toFixed(2), rate.rate));
-
-  return {
-    summary: {
-      ...summary,
-      totalIncome: convert(summary.totalIncome),
-      totalExpense: convert(summary.totalExpense),
-      netCashFlow: convert(summary.netCashFlow),
-      monthlyTotals: summary.monthlyTotals.map((month) => ({
-        ...month,
-        income: convert(month.income),
-        expense: convert(month.expense),
-      })),
-    },
-    currency: displayCurrency,
-    rateUnavailable: false,
-  };
-}
 
 function percentChange(current: number, previous: number) {
   if (previous <= 0) return null;

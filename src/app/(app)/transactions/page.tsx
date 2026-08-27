@@ -30,7 +30,15 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
   const page = Math.max(1, Number(firstParam(searchParams.page)) || 1);
   const type = firstParam(searchParams.type);
 
-  const user = await getUserById(session.userId);
+  // getUserById and getOrganization are independent reads (one keyed on
+  // session.userId, the other on session.organizationId) that were
+  // previously awaited one after another — a needless extra DB round
+  // trip on every single transactions-page load. Neither depends on the
+  // other's result, so they run concurrently.
+  const [user, organization] = await Promise.all([
+    getUserById(session.userId),
+    getOrganization(session.organizationId),
+  ]);
   const parsedPrefs = preferencesSchema.safeParse(user?.preferences ?? {});
   const preferences = parsedPrefs.success ? parsedPrefs.data : DEFAULT_PREFERENCES;
 
@@ -43,11 +51,7 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
   }
 
   const typeFilter = type === "INCOME" || type === "EXPENSE" ? type : undefined;
-
-  const [organization, canEdit] = [
-    await getOrganization(session.organizationId),
-    canWriteTransactions(session.role),
-  ];
+  const canEdit = canWriteTransactions(session.role);
   const displayCurrency = session.displayCurrency ?? organization?.baseCurrency ?? "GBP";
 
   const { rows, total, totalPages } = await listTransactions(session.organizationId, {
