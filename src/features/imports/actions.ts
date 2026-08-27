@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { verifySession } from "@/server/services/session";
 import { auditLogSafely } from "@/server/services/audit-log";
+import { logServerError } from "@/server/log";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/client-ip";
 import { parseImportFile, ImportFileError } from "./parse";
@@ -100,7 +101,12 @@ export async function analyzeImportAction(formData: FormData): Promise<AnalyzeIm
     parsed = parseImportFile(Buffer.from(await file.arrayBuffer()), file.name);
   } catch (error) {
     if (error instanceof ImportFileError) return { error: error.message };
-    console.error("Import parse failed:", error);
+    logServerError(
+      "imports",
+      "Import file parse failed",
+      { organizationId: session.organizationId, userId: session.userId, filename: file.name },
+      error
+    );
     return { error: "The file could not be read." };
   }
 
@@ -198,7 +204,12 @@ export async function commitImportAction(formData: FormData): Promise<CommitImpo
     parsed = parseImportFile(Buffer.from(await file.arrayBuffer()), file.name);
   } catch (error) {
     if (error instanceof ImportFileError) return { error: error.message };
-    console.error("Import parse failed:", error);
+    logServerError(
+      "imports",
+      "Import file parse failed",
+      { organizationId: session.organizationId, userId: session.userId, filename: file.name },
+      error
+    );
     return { error: "The file could not be read." };
   }
 

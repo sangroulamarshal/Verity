@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "@/db/client";
 import { auditLogs, users } from "@/db/schema";
 import { and, desc, eq, gte, lte, count } from "drizzle-orm";
+import { logServerError } from "@/server/log";
 
 export type AuditAction =
   | "USER_REGISTERED"
@@ -60,7 +61,19 @@ export async function auditLogSafely(...args: Parameters<typeof recordAuditLog>)
   try {
     await recordAuditLog(...args);
   } catch (error) {
-    console.error("Failed to write audit log:", error);
+    const [input] = args;
+    logServerError(
+      "audit-log",
+      "Failed to write audit log entry",
+      {
+        action: input.action,
+        organizationId: input.organizationId ?? undefined,
+        userId: input.userId ?? undefined,
+        entityType: input.entityType,
+        entityId: input.entityId,
+      },
+      error
+    );
   }
 }
 

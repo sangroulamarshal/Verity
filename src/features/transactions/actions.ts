@@ -11,6 +11,7 @@ import {
 import { getOrganization } from "@/server/services/organizations";
 import { FxRateUnavailableError } from "@/server/services/fx";
 import { auditLogSafely } from "@/server/services/audit-log";
+import { logServerError } from "@/server/log";
 import { canWriteTransactions } from "@/lib/permissions";
 import { transactionSchema } from "./schema";
 import { diffTransaction } from "./audit-diff";
@@ -156,8 +157,13 @@ export async function createTransactionAction(
   _prevState: TransactionFormState | undefined,
   formData: FormData
 ): Promise<TransactionFormState> {
+  // Declared outside the try so the catch below can still identify whose
+  // submission this was, even if the failure happened after verifySession()
+  // resolved (the common case — a login-redirect failure is caught by
+  // isFrameworkControlFlowError and rethrown before ever reaching here).
+  let session: Awaited<ReturnType<typeof verifySession>> | undefined;
   try {
-    const session = await verifySession();
+    session = await verifySession();
 
     if (!canWriteTransactions(session.role)) {
       return { message: "Your role doesn't have permission to add transactions." };
@@ -213,7 +219,12 @@ export async function createTransactionAction(
     // closes every remaining gap; a rejected action otherwise leaves
     // useActionState's `pending` reset to false with `state` never
     // updated, so the button just resets with nothing shown.
-    console.error("[transactions] createTransactionAction failed unexpectedly:", error);
+    logServerError(
+      "transactions",
+      "createTransactionAction failed unexpectedly",
+      { organizationId: session?.organizationId, userId: session?.userId },
+      error
+    );
     return {
       message: "Something went wrong saving this transaction. Please try again.",
       values: rawFormValues(formData),
@@ -226,8 +237,11 @@ export async function updateTransactionAction(
   _prevState: TransactionFormState | undefined,
   formData: FormData
 ): Promise<TransactionFormState> {
+  // See the matching comment in createTransactionAction — hoisted so a
+  // failure can still be logged with who/what it belonged to.
+  let session: Awaited<ReturnType<typeof verifySession>> | undefined;
   try {
-    const session = await verifySession();
+    session = await verifySession();
 
     if (!canWriteTransactions(session.role)) {
       return { message: "Your role doesn't have permission to edit transactions." };
@@ -274,7 +288,12 @@ export async function updateTransactionAction(
   } catch (error) {
     if (isFrameworkControlFlowError(error)) throw error;
     // See the matching comment in createTransactionAction above.
-    console.error("[transactions] updateTransactionAction failed unexpectedly:", error);
+    logServerError(
+      "transactions",
+      "updateTransactionAction failed unexpectedly",
+      { transactionId: id, organizationId: session?.organizationId, userId: session?.userId },
+      error
+    );
     return {
       message: "Something went wrong saving this transaction. Please try again.",
       values: rawFormValues(formData),
@@ -282,39 +301,73 @@ export async function updateTransactionAction(
   }
 }
 
-export async function deleteTransactionAction(id: string): Promise<void> {
-  const session = await verifySession();
+export interface DeleteTransactionResult {
+  success: boolean;
+  message?: string;
+}
 
-  if (!canWriteTransactions(session.role)) {
-    return;
+/**
+ * Previously had no try/catch at all — any thrown error (a DB blip, a
+ * connection timeout) became an unhandled rejection inside the client's
+ * `startTransition(async () => { await deleteTransactionAction(id) })`,
+ * which React does not surface to any error boundary. The button's
+ * `isPending` still resets to false once the promise settles either way,
+ * so the net effect was identical to the original "Add transaction"
+ * silent-failure bug: click Delete, nothing happens, nothing shown,
+ * nothing logged. Now returns a real result the button renders, and any
+ * unexpected failure is caught, logged with which transaction/org/user
+ * it was, and reported back instead of vanishing.
+ */
+export async function deleteTransactionAction(id: string): Promise<DeleteTransactionResult> {
+  let session: Awaited<ReturnType<typeof verifySession>> | undefined;
+  try {
+    session = await verifySession();
+
+    if (!canWriteTransactions(session.role)) {
+      return { success: false, message: "Your role doesn't have permission to delete transactions." };
+    }
+
+    const row = await deleteTransaction(session.organizationId, id);
+    if (!row) {
+      // Not an error state — most commonly a double-click racing itself,
+      // or a stale row from another tab. Either way the end state the
+      // person wanted (this transaction is gone) already holds, so this
+      // reports success rather than a scary, misleading error.
+      revalidatePath("/transactions");
+      revalidatePath("/dashboard");
+      return { success: true };
+    }
+
+    await auditLogSafely({
+      action: "TRANSACTION_DELETED",
+      organizationId: session.organizationId,
+      userId: session.userId,
+      entityType: "transaction",
+      entityId: id,
+      // The row is gone after this — keep a snapshot of what was deleted,
+      // since entityId alone won't resolve to anything afterward.
+      metadata: {
+        date: row.date,
+        amount: row.amount,
+        currency: row.currency,
+        baseAmount: row.baseAmount,
+        baseCurrency: row.baseCurrency,
+        type: row.type,
+        category: row.category,
+      },
+    });
+
+    revalidatePath("/transactions");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (error) {
+    if (isFrameworkControlFlowError(error)) throw error;
+    logServerError(
+      "transactions",
+      "deleteTransactionAction failed unexpectedly",
+      { transactionId: id, organizationId: session?.organizationId, userId: session?.userId },
+      error
+    );
+    return { success: false, message: "Something went wrong deleting this transaction. Please try again." };
   }
-
-  const row = await deleteTransaction(session.organizationId, id);
-  if (!row) {
-    // Nothing to log or revalidate — silently a no-op for an id that
-    // doesn't exist or isn't this organization's.
-    return;
-  }
-
-  await auditLogSafely({
-    action: "TRANSACTION_DELETED",
-    organizationId: session.organizationId,
-    userId: session.userId,
-    entityType: "transaction",
-    entityId: id,
-    // The row is gone after this — keep a snapshot of what was deleted,
-    // since entityId alone won't resolve to anything afterward.
-    metadata: {
-      date: row.date,
-      amount: row.amount,
-      currency: row.currency,
-      baseAmount: row.baseAmount,
-      baseCurrency: row.baseCurrency,
-      type: row.type,
-      category: row.category,
-    },
-  });
-
-  revalidatePath("/transactions");
-  revalidatePath("/dashboard");
 }
