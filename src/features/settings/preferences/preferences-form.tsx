@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
-import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { useAccountTheme } from "@/components/use-account-theme";
 import { updatePreferencesAction, type PreferencesFormState } from "./actions";
 import { DATE_FORMATS, DEFAULT_TRANSACTION_VIEWS, type Preferences } from "./schema";
 
@@ -17,7 +17,10 @@ const VIEW_LABELS: Record<(typeof DEFAULT_TRANSACTION_VIEWS)[number], string> = 
 };
 
 export function AppearanceControl() {
-  const { theme, setTheme } = useTheme();
+  // Also persists to the account — see use-account-theme.ts. Previously
+  // this called next-themes' setTheme() directly, which only ever wrote
+  // to this browser's localStorage.
+  const { theme, setTheme } = useAccountTheme();
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -25,7 +28,7 @@ export function AppearanceControl() {
       <Select
         id="appearance"
         value={theme ?? "system"}
-        onChange={(event) => setTheme(event.target.value)}
+        onChange={(event) => setTheme(event.target.value as "light" | "dark" | "system")}
         className="max-w-xs"
       >
         <option value="light">Light</option>

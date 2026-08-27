@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useTheme } from "next-themes";
 import { Moon, Sun, Monitor, ChevronDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -11,9 +10,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAccountTheme } from "@/components/use-account-theme";
 
 export function ThemeToggle() {
-  const { setTheme } = useTheme();
+  // setTheme here also persists to the account (see use-account-theme.ts)
+  // — previously this only ever called next-themes' own setTheme(),
+  // which is why the theme reverted whenever local storage/cache was
+  // cleared or on a different browser: it was never actually saved.
+  const { setTheme } = useAccountTheme();
   // No JS "mounted" state needed: the server and client render identical
   // markup, and the icon swap is driven purely by the `.dark` class that
   // next-themes puts on <html> (see globals.css `@custom-variant dark`).

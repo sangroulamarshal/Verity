@@ -19,3 +19,20 @@ export const DEFAULT_PREFERENCES: Preferences = {
   dateFormat: "DD/MM/YYYY",
   defaultTransactionView: "ALL",
 };
+
+// Appearance (theme) is a genuinely separate preference from the two
+// above: it's set from two different places (the header ThemeToggle and
+// this page's AppearanceControl), and next-themes needs it to apply
+// instantly client-side, whereas dateFormat/defaultTransactionView only
+// take effect on the next server render. Kept as its own schema/action
+// (setThemeAction, in ./actions) rather than folded into
+// preferencesSchema/updatePreferencesAction — see the comment there for
+// why: bundling it into the same schema would make theme a required
+// field on every future preferencesSchema.safeParse(formData) call, and
+// FormData.get() of a field the form doesn't render comes back as a
+// bare `null`, which is exactly the class of bug documented in
+// features/transactions/actions.ts's presetId fix.
+export const THEMES = ["light", "dark", "system"] as const;
+export const themeSchema = z.enum(THEMES);
+export type Theme = z.infer<typeof themeSchema>;
+export const DEFAULT_THEME: Theme = "system";
