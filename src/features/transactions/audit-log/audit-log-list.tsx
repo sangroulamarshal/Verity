@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { AuditLogEntry } from "@/server/services/audit-log";
 import { formatCurrency } from "@/lib/format";
 
@@ -30,6 +31,33 @@ function formatChangeValue(field: string, value: unknown): string {
   return String(value);
 }
 
+/**
+ * A short, stable per-transaction tag (first 8 chars of the row's own
+ * uuid). Previously nothing on this page identified *which* transaction
+ * a line referred to — two "Created transaction $1,000.00 · expense"
+ * entries were rendered completely identically, and there was no way to
+ * tell a Created/Edited/Deleted trio apart from an unrelated one, or to
+ * get from a log line back to the actual transaction. This tag is
+ * consistent across every entry for the same transaction (create, every
+ * edit, delete all share entityId), so entries about the same
+ * transaction can be visually matched even across the full list, and it
+ * links to the transactions table filtered to that exact row when the
+ * transaction still exists (a deleted transaction's link simply finds
+ * nothing, which is expected).
+ */
+function TransactionRef({ entityId }: { entityId: string | null }) {
+  if (!entityId) return null;
+  return (
+    <Link
+      href={`/transactions?transactionId=${entityId}`}
+      className="shrink-0 rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground hover:border-primary hover:text-primary"
+      title={`View this transaction (${entityId})`}
+    >
+      #{entityId.slice(0, 8)}
+    </Link>
+  );
+}
+
 interface AuditLogListProps {
   entries: AuditLogEntry[];
 }
@@ -57,17 +85,27 @@ export function AuditLogList({ entries }: AuditLogListProps) {
           metadata && typeof metadata === "object" && "changes" in metadata
             ? (metadata as { changes?: Record<string, { from: unknown; to: unknown }> }).changes
             : undefined;
+        const flatMetadata =
+          !changes && metadata && typeof metadata === "object"
+            ? (metadata as Record<string, unknown>)
+            : undefined;
+        const identifyingLine = flatMetadata
+          ? [flatMetadata.description, flatMetadata.counterparty, flatMetadata.referenceId]
+              .map((v) => (typeof v === "string" ? v.trim() : ""))
+              .find((v) => v.length > 0)
+          : undefined;
 
         return (
           <li key={entry.id} className="flex flex-col gap-1.5 px-4 py-3">
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-              <p className="text-sm">
+              <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm">
                 <span className="font-medium text-foreground">
                   {entry.userEmail ?? "Unknown user"}
                 </span>{" "}
                 <span className="text-muted-foreground">
                   {ACTION_LABELS[entry.action] ?? entry.action.replaceAll("_", " ").toLowerCase()}
                 </span>
+                {entry.entityType === "transaction" && <TransactionRef entityId={entry.entityId} />}
               </p>
               <time className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
                 {new Date(entry.createdAt).toLocaleString(undefined, {
@@ -99,13 +137,14 @@ export function AuditLogList({ entries }: AuditLogListProps) {
               </dl>
             )}
 
-            {!changes && metadata && "amount" in (metadata as Record<string, unknown>) && (
+            {flatMetadata && "amount" in flatMetadata && (
               <p className="text-xs text-muted-foreground">
-                {formatCurrency(
-                  String((metadata as Record<string, unknown>).amount),
-                  String((metadata as Record<string, unknown>).currency ?? "")
-                )}{" "}
-                &middot; {String((metadata as Record<string, unknown>).category ?? "")}
+                {formatCurrency(String(flatMetadata.amount), String(flatMetadata.currency ?? ""))}{" "}
+                &middot; {String(flatMetadata.category ?? "")}
+                {/* description/counterparty/referenceId (whichever is set) —
+                    the detail that actually tells two same-category,
+                    same-amount transactions apart at a glance. */}
+                {identifyingLine ? ` \u00b7 ${identifyingLine}` : ""}
               </p>
             )}
           </li>

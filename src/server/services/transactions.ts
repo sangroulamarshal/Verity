@@ -24,6 +24,11 @@ export interface ListTransactionsOptions {
   pageSize?: number;
   /** Matches description, category, counterparty, reference, or currency. */
   search?: string;
+  /** Exact id match — used by the audit log's "view this transaction"
+   * link, distinct from `search` (free-text, multi-field). Still
+   * compounded with organizationId below like every other condition, so
+   * an id from another organization simply matches zero rows. */
+  transactionId?: string;
   type?: "INCOME" | "EXPENSE";
   category?: string;
   currency?: string;
@@ -119,6 +124,7 @@ export async function listTransactions(
 
   const conditions = [eq(transactions.organizationId, organizationId)];
 
+  if (options.transactionId) conditions.push(eq(transactions.id, options.transactionId));
   if (options.type) conditions.push(eq(transactions.type, options.type));
   if (options.category) conditions.push(eq(transactions.category, options.category));
   if (options.currency) conditions.push(eq(transactions.currency, options.currency));

@@ -58,6 +58,7 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
     page,
     type: typeFilter,
     search: firstParam(searchParams.search),
+    transactionId: firstParam(searchParams.transactionId),
     currency: firstParam(searchParams.currency),
     paymentMethod: firstParam(searchParams.paymentMethod),
     dateFrom: firstParam(searchParams.dateFrom),

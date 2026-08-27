@@ -195,6 +195,11 @@ export async function createTransactionAction(
       userId: session.userId,
       entityType: "transaction",
       entityId: row.id,
+      // description/counterparty/referenceId included alongside
+      // category so two transactions with the same category and amount
+      // (e.g. two "expense" entries of the same size) don't render as
+      // indistinguishable lines in the audit log — see the matching
+      // note on AuditLogList about why entityId is now also shown.
       metadata: {
         date: row.date,
         amount: row.amount,
@@ -203,6 +208,9 @@ export async function createTransactionAction(
         baseCurrency: row.baseCurrency,
         type: row.type,
         category: row.category,
+        counterparty: row.counterparty,
+        description: row.description,
+        referenceId: row.referenceId,
       },
     });
 
@@ -354,6 +362,9 @@ export async function deleteTransactionAction(id: string): Promise<DeleteTransac
         baseCurrency: row.baseCurrency,
         type: row.type,
         category: row.category,
+        counterparty: row.counterparty,
+        description: row.description,
+        referenceId: row.referenceId,
       },
     });
 
