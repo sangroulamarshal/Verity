@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { deleteCustomerAction } from "./actions";
 
 interface DeleteCustomerButtonProps {
@@ -14,6 +15,7 @@ interface DeleteCustomerButtonProps {
 
 export function DeleteCustomerButton({ id, onDeleted }: DeleteCustomerButtonProps) {
   const [isPending, startTransition] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   return (
@@ -24,28 +26,32 @@ export function DeleteCustomerButton({ id, onDeleted }: DeleteCustomerButtonProp
         size="sm"
         className="text-destructive hover:text-destructive"
         disabled={isPending}
-        onClick={() => {
-          if (
-            !window.confirm(
-              "Delete this customer? Transactions already linked to them are kept, just unlinked."
-            )
-          ) {
-            return;
-          }
+        onClick={() => setConfirmOpen(true)}
+      >
+        {isPending ? "Deleting…" : "Delete"}
+      </Button>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Delete this customer?"
+        description="Transactions already linked to them are kept, just unlinked."
+        isPending={isPending}
+        onConfirm={() => {
           setError(null);
           startTransition(async () => {
             const result = await deleteCustomerAction(id);
             if (!result.success) {
               setError(result.message ?? "Something went wrong deleting this customer.");
+              setConfirmOpen(false);
               return;
             }
+            setConfirmOpen(false);
             onDeleted?.();
           });
         }}
-      >
-        {isPending ? "Deleting…" : "Delete"}
-      </Button>
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      />
     </div>
   );
 }

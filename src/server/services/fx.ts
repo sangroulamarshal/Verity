@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
+import { and, eq, lt } from "drizzle-orm";
 import { db } from "@/db/client";
 import { fxRates } from "@/db/schema";
 import { convertAmount } from "@/lib/money";
@@ -8,6 +8,23 @@ import { convertAmount } from "@/lib/money";
 const FX_API_URL = "https://allratestoday.com/api/v1/rates";
 const FX_SOURCE_LABEL = "allratestoday";
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour — see brief section 25 ("don't call the API unnecessarily")
+// fx_rates is documented as "a cache of the latest known rate, not a
+// history" (schema/fx-rates.ts) — a row that hasn't been refreshed in
+// this long means nothing has requested that currency pair in a long
+// time (an org switched base currency, a one-off transaction currency
+// never recurred, etc.), so it's safe to drop rather than let it sit
+// there forever. The actual rate used for any past transaction is
+// already immutably captured on that transaction row itself
+// (exchangeRate/exchangeRateTime), so pruning this cache loses no
+// audit trail.
+const STALE_RATE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+// Cleanup piggybacks on normal cache-refresh traffic instead of a
+// dedicated cron/queue (brief: no unnecessary background
+// infrastructure) — running the delete on every single fetch would add
+// a query to every cache miss for no real benefit, since stale rows
+// only need pruning occasionally, not immediately. A small random
+// chance per fetch keeps the table bounded without either extreme.
+const STALE_RATE_CLEANUP_PROBABILITY = 0.05;
 
 /**
  * Thrown when a rate genuinely cannot be obtained (API unreachable,
@@ -173,7 +190,23 @@ async function fetchAndCacheRate(source: string, target: string): Promise<Exchan
     );
   }
 
+  // Same non-fatal treatment as the cache write above — pruning old
+  // rows is pure housekeeping, never allowed to affect the rate this
+  // call already successfully obtained.
+  if (Math.random() < STALE_RATE_CLEANUP_PROBABILITY) {
+    try {
+      await pruneStaleRates();
+    } catch (error) {
+      console.error("[fx] Failed to prune stale cached rates.", error);
+    }
+  }
+
   return result;
+}
+
+async function pruneStaleRates(): Promise<void> {
+  const cutoff = new Date(Date.now() - STALE_RATE_RETENTION_MS);
+  await db.delete(fxRates).where(lt(fxRates.fetchedAt, cutoff));
 }
 
 async function upsertCachedRate(
