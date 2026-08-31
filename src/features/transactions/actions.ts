@@ -14,6 +14,7 @@ import { FxRateUnavailableError } from "@/server/services/fx";
 import { auditLogSafely } from "@/server/services/audit-log";
 import { logServerError } from "@/server/log";
 import { canWriteTransactions } from "@/lib/permissions";
+import { evaluateAndStoreRiskSafely } from "@/server/services/risk";
 import { transactionSchema } from "./schema";
 import { diffTransaction } from "./audit-diff";
 
@@ -256,6 +257,12 @@ export async function createTransactionAction(
       },
     });
 
+    // Phase 6 — evaluated after the audit log entry (so "transaction
+    // created" is always recorded even if risk evaluation itself has a
+    // problem) and never allowed to fail the save (see that function's
+    // own comment).
+    await evaluateAndStoreRiskSafely(session.organizationId, row.id);
+
     revalidatePath("/transactions");
     revalidatePath("/dashboard");
     return { success: true };
@@ -336,6 +343,12 @@ export async function updateTransactionAction(
       entityId: row.id,
       metadata: before ? { changes: diffTransaction(before, row) } : undefined,
     });
+
+    // Phase 6 — a materially edited transaction is re-evaluated so a
+    // corrected amount/category/customer is reflected in its risk
+    // state; the prior evaluation is preserved as history, not
+    // overwritten (see risk_events' own comment).
+    await evaluateAndStoreRiskSafely(session.organizationId, row.id);
 
     revalidatePath("/transactions");
     revalidatePath("/dashboard");

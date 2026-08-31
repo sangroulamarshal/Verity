@@ -15,3 +15,15 @@ export const transactionSourceEnum = pgEnum("transaction_source", [
   "CSV",
   "EXCEL",
 ]);
+
+// Phase 6 — Risk & Anomaly Engine. Four bands, not a raw 0-100 score
+// alone, so the UI/filters/notifications have a small stable vocabulary
+// to key off instead of every consumer re-implementing its own
+// score -> bucket thresholds.
+export const riskLevelEnum = pgEnum("risk_level", ["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
+
+// A transaction's risk review workflow. UNREVIEWED is the only level a
+// fresh evaluation can produce — REVIEWED/DISMISSED only happen via an
+// explicit user action (see server/services/risk.ts), never assigned by
+// the scoring engine itself.
+export const riskStatusEnum = pgEnum("risk_status", ["UNREVIEWED", "REVIEWED", "DISMISSED"]);

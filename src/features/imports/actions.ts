@@ -10,6 +10,7 @@ import { parseImportFile, ImportFileError } from "./parse";
 import { suggestColumnMapping } from "@/server/engines/column-detection";
 import { normalizeRows, validateColumnMapping } from "@/server/engines/normalization";
 import { flagExistingDuplicates, commitImport } from "@/server/services/imports";
+import { recalculateRiskForImport } from "@/server/services/risk";
 import { getOrganization } from "@/server/services/organizations";
 import { FxRateUnavailableError } from "@/server/services/fx";
 import { columnMappingSchema, currencySchema } from "./schema";
@@ -273,6 +274,21 @@ export async function commitImportAction(formData: FormData): Promise<CommitImpo
       duplicateRowCount: importRow.duplicateRowCount,
     },
   });
+
+  // Phase 6 — evaluate every transaction this import just inserted.
+  // Never allowed to fail the import itself (brief: "preserve existing
+  // functionality"); a failure here just means those rows stay
+  // unscored until the next batch recalculation.
+  try {
+    await recalculateRiskForImport(session.organizationId, importRow.id);
+  } catch (error) {
+    logServerError(
+      "risk",
+      "Risk evaluation failed for committed import",
+      { organizationId: session.organizationId, importId: importRow.id },
+      error
+    );
+  }
 
   revalidatePath("/imports");
   revalidatePath("/transactions");

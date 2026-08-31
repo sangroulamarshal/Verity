@@ -22,4 +22,5 @@ export * from "./transactions";
 export * from "./fx-rates";
 export * from "./organization-invites";
 export * from "./imports";
+export * from "./risk-events";
 export * from "./relations";

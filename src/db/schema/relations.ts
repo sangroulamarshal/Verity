@@ -7,6 +7,7 @@ import { transactionPresets } from "./transaction-presets";
 import { customers } from "./customers";
 import { organizationInvites } from "./organization-invites";
 import { imports, importMappings } from "./imports";
+import { riskEvents } from "./risk-events";
 
 export const organizationsRelations = relations(organizations, ({ many }) => ({
   // Was `one(users, ...)` — organizations now have many users (Members),
@@ -18,9 +19,10 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   customers: many(customers),
   invites: many(organizationInvites),
   imports: many(imports),
+  riskEvents: many(riskEvents),
 }));
 
-export const transactionsRelations = relations(transactions, ({ one }) => ({
+export const transactionsRelations = relations(transactions, ({ one, many }) => ({
   organization: one(organizations, {
     fields: [transactions.organizationId],
     references: [organizations.id],
@@ -32,6 +34,22 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
   customer: one(customers, {
     fields: [transactions.customerId],
     references: [customers.id],
+  }),
+  riskEvents: many(riskEvents),
+}));
+
+export const riskEventsRelations = relations(riskEvents, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [riskEvents.organizationId],
+    references: [organizations.id],
+  }),
+  transaction: one(transactions, {
+    fields: [riskEvents.transactionId],
+    references: [transactions.id],
+  }),
+  reviewedBy: one(users, {
+    fields: [riskEvents.reviewedByUserId],
+    references: [users.id],
   }),
 }));
 

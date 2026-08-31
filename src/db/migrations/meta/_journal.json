@@ -43,6 +43,13 @@
       "when": 1787822944911,
       "tag": "0005_customers",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788167509607,
+      "tag": "0006_risk_engine",
+      "breakpoints": true
     }
   ]
 }

@@ -48,6 +48,15 @@ export function canWriteCustomers(role: UserRole): boolean {
   return role === "OWNER" || role === "ADMIN" || role === "FINANCE";
 }
 
+/** Mark a risk alert Reviewed/Dismissed (Phase 6). Same roles as
+ * canWriteTransactions — reviewing a risk alert is itself a write
+ * action on transaction data, not a separate privileged capability, so
+ * VIEWER/ANALYST can see the Risk pages (canViewTransactions covers
+ * that, same as everywhere else) but can't change an alert's status. */
+export function canReviewRisk(role: UserRole): boolean {
+  return role === "OWNER" || role === "ADMIN" || role === "FINANCE";
+}
+
 /** View transactions, dashboard, audit log — everyone, including VIEWER.
  * Takes no role parameter since the answer is always true; kept as an
  * explicit function (rather than omitted) so the permission model

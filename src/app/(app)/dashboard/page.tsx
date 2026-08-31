@@ -7,6 +7,7 @@ import { organizations } from "@/db/schema";
 import { verifySession } from "@/server/services/session";
 import { getDashboardSummary } from "@/server/services/dashboard";
 import { resolveDisplaySummary } from "@/server/services/dashboard-display";
+import { getRiskSummary } from "@/server/services/risk";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CashFlowChart } from "@/components/cash-flow-chart";
@@ -50,6 +51,7 @@ export default async function DashboardPage() {
       .limit(1),
     getDashboardSummary(session.organizationId),
   ]);
+  const riskSummary = await getRiskSummary(session.organizationId);
 
   const baseCurrency = org?.baseCurrency ?? "GBP";
   const requestedCurrency = session.displayCurrency ?? baseCurrency;
@@ -201,6 +203,37 @@ export default async function DashboardPage() {
               </ul>
             </CardContent>
           </Card>
+
+          {riskSummary.totalAnalyzed > 0 && (
+            <Card className="mt-4">
+              <CardHeader className="flex-row items-center justify-between">
+                <CardTitle>Risk</CardTitle>
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/risk">Review risk &rarr;</Link>
+                </Button>
+              </CardHeader>
+              <CardContent className="flex items-center gap-6">
+                <div>
+                  <p className="text-2xl font-semibold tabular-nums text-orange-600 dark:text-orange-400">
+                    {riskSummary.counts.HIGH}
+                  </p>
+                  <p className="text-xs text-muted-foreground">High</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-semibold tabular-nums text-destructive">
+                    {riskSummary.counts.CRITICAL}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Critical</p>
+                </div>
+                {riskSummary.requiringReview > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    {riskSummary.requiringReview} transaction
+                    {riskSummary.requiringReview === 1 ? "" : "s"} require review
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
     </div>

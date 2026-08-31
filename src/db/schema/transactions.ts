@@ -11,9 +11,14 @@ import {
 import { organizations } from "./organizations";
 import { transactionPresets } from "./transaction-presets";
 import { customers } from "./customers";
-import { transactionTypeEnum, transactionSourceEnum } from "./enums";
+import {
+  transactionTypeEnum,
+  transactionSourceEnum,
+  riskLevelEnum,
+  riskStatusEnum,
+} from "./enums";
 
-export { transactionTypeEnum, transactionSourceEnum };
+export { transactionTypeEnum, transactionSourceEnum, riskLevelEnum, riskStatusEnum };
 
 // customerId: added in Phase 5, now that `customers` exists. Phase 3's
 // original note here explained why it couldn't be added any earlier
@@ -116,6 +121,22 @@ export const transactions = pgTable(
 
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+
+    // --- Phase 6: Risk & Anomaly Engine ---
+    // Denormalized "current" state, kept in sync with the latest row in
+    // risk_events (see schema/risk-events.ts) so the transactions list,
+    // dashboard, and filters never need to join/aggregate risk_events
+    // just to show a badge or filter by level. risk_events remains the
+    // append-only source of truth for history/auditability; these three
+    // columns are a read-optimization, not a second source of truth —
+    // only server/services/risk.ts writes them, and always alongside a
+    // new risk_events row in the same transaction.
+    // Nullable: existing rows created before Phase 6 (or before a batch
+    // recalculation has run) simply have no risk evaluation yet, which
+    // is a different, distinguishable state from a genuinely LOW score.
+    riskScore: numeric("risk_score", { precision: 5, scale: 2, mode: "number" }),
+    riskLevel: riskLevelEnum("risk_level"),
+    riskStatus: riskStatusEnum("risk_status"),
   },
   (table) => [
     index("transactions_org_id_idx").on(table.organizationId),
@@ -125,5 +146,9 @@ export const transactions = pgTable(
     // Customer detail page's "transaction history" query — always
     // scoped to one customer, most recent first.
     index("transactions_customer_id_idx").on(table.customerId, table.date),
+    // Risk overview's level-filtered, most-recent-first table, and the
+    // dashboard's "N high / N critical" counts — both always scoped to
+    // one organization, same shape as the date index above.
+    index("transactions_org_id_risk_level_idx").on(table.organizationId, table.riskLevel),
   ]
 );
