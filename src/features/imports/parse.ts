@@ -2,6 +2,7 @@ import "server-only";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import type { ParsedFile } from "@/server/engines/import-types";
+import { detectHeaderRowIndex } from "@/server/engines/column-detection";
 
 export const MAX_IMPORT_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 export const MAX_IMPORT_ROWS = 5_000;
@@ -75,8 +76,13 @@ export function parseImportFile(buffer: Buffer, filename: string): ParsedFile {
     if (result.data.length === 0) {
       throw new ImportFileError("The file has no rows.");
     }
-    headers = result.data[0].map((h) => String(h ?? "").trim());
-    dataRows = result.data.slice(1);
+    // Not always row 0 — some exports (bank/wallet statements in
+    // particular) prepend summary rows before the real header row. See
+    // detectHeaderRowIndex's own comment for why this is safe for
+    // ordinary files too (it falls back to row 0 when nothing scores).
+    const headerIndex = detectHeaderRowIndex(result.data);
+    headers = result.data[headerIndex].map((h) => String(h ?? "").trim());
+    dataRows = result.data.slice(headerIndex + 1);
   } else if (extension === "xlsx" || extension === "xls") {
     let workbook: XLSX.WorkBook;
     try {
@@ -97,8 +103,9 @@ export function parseImportFile(buffer: Buffer, filename: string): ParsedFile {
     if (rows.length === 0) {
       throw new ImportFileError("The file has no rows.");
     }
-    headers = rows[0].map((h) => String(h ?? "").trim());
-    dataRows = rows.slice(1);
+    const headerIndex = detectHeaderRowIndex(rows);
+    headers = rows[headerIndex].map((h) => String(h ?? "").trim());
+    dataRows = rows.slice(headerIndex + 1);
   } else {
     throw new ImportFileError("Unsupported file type. Upload a .csv, .xlsx, or .xls file.");
   }

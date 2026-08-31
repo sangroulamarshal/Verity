@@ -121,8 +121,19 @@ const DATE_PATTERNS: Array<{ regex: RegExp; toIso: (m: RegExpMatchArray) => stri
 function parseImportDate(raw: string): string | null {
   const trimmed = raw.trim();
 
+  // Bank/wallet exports frequently pair the date with a time-of-day —
+  // e.g. eSewa's "2026-08-29 20:40:00.0" or an ISO "...T20:40:00" — but
+  // the stored transaction date is calendar-only (schema/transactions.ts).
+  // Stripping a trailing time component here, rather than adding a
+  // parallel timestamp regex for every date shape above, keeps every
+  // existing DATE_PATTERNS entry as the single source of truth for what
+  // a valid date looks like. A row with only a time and no recognizable
+  // date prefix is left untouched and simply fails to match below, same
+  // as before.
+  const dateOnly = trimmed.match(/^(\S+)[ T]\d{1,2}:\d{2}(:\d{2}(\.\d+)?)?$/)?.[1] ?? trimmed;
+
   for (const pattern of DATE_PATTERNS) {
-    const match = trimmed.match(pattern.regex);
+    const match = dateOnly.match(pattern.regex);
     if (!match) continue;
 
     const iso = pattern.toIso(match);
