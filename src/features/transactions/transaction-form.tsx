@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { TRANSACTION_CURRENCIES } from "@/lib/currency";
 import { PAYMENT_METHOD_LABELS, PAYMENT_METHODS } from "./schema";
 import { ExchangeRatePreview } from "./exchange-rate-preview";
+import { CustomerPicker } from "./customer-picker";
 import type { TransactionFormState } from "./actions";
 
 export interface TransactionFormDefaults {
@@ -22,6 +23,7 @@ export interface TransactionFormDefaults {
   description?: string;
   referenceId?: string;
   presetId?: string;
+  customerId?: string;
 }
 
 interface TransactionFormProps {
@@ -163,20 +165,11 @@ export function TransactionForm({
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="counterparty">
-            Customer/Vendor <span className="text-muted-foreground">(optional)</span>
-          </Label>
-          <Input
-            id="counterparty"
-            name="counterparty"
-            defaultValue={state.values?.counterparty ?? defaultValues?.counterparty}
-            aria-invalid={!!state.errors?.counterparty}
-          />
-          {state.errors?.counterparty && (
-            <p className="text-xs text-destructive">{state.errors.counterparty[0]}</p>
-          )}
-        </div>
+        <CustomerPicker
+          defaultCounterparty={state.values?.counterparty ?? defaultValues?.counterparty}
+          defaultCustomerId={state.values?.customerId ?? defaultValues?.customerId}
+          error={state.errors?.counterparty?.[0]}
+        />
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="paymentMethod">

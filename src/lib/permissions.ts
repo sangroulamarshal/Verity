@@ -38,6 +38,16 @@ export function canWriteTransactions(role: UserRole): boolean {
   return role === "OWNER" || role === "ADMIN" || role === "FINANCE";
 }
 
+/** Create, edit, and delete customer records (Phase 5). Same roles as
+ * canWriteTransactions — customers are financial counterparty data,
+ * naturally paired with the same write access — but kept as its own
+ * function rather than reused directly, consistent with this file's
+ * one-function-per-domain-capability pattern (brief section 37) rather
+ * than overloading canWriteTransactions's name for a different noun. */
+export function canWriteCustomers(role: UserRole): boolean {
+  return role === "OWNER" || role === "ADMIN" || role === "FINANCE";
+}
+
 /** View transactions, dashboard, audit log — everyone, including VIEWER.
  * Takes no role parameter since the answer is always true; kept as an
  * explicit function (rather than omitted) so the permission model

@@ -10,17 +10,17 @@ import {
 } from "drizzle-orm/pg-core";
 import { organizations } from "./organizations";
 import { transactionPresets } from "./transaction-presets";
+import { customers } from "./customers";
 import { transactionTypeEnum, transactionSourceEnum } from "./enums";
 
 export { transactionTypeEnum, transactionSourceEnum };
 
-// NOTE on `customerId`: the brief's canonical Transaction model includes
-// one, but `customers` doesn't exist until Phase 5 — see
-// db/schema/index.ts's phase list. Adding an FK to a table that doesn't
-// exist isn't possible, and a column with no FK (just a raw uuid) would
-// violate "use foreign keys" for financial data. Phase 5 adds `customerId`
-// as a proper FK via a migration once the customers table exists; nothing
-// here needs to change to support that.
+// customerId: added in Phase 5, now that `customers` exists. Phase 3's
+// original note here explained why it couldn't be added any earlier
+// (an FK to a table that didn't exist yet would violate "every table
+// holding financial data uses foreign keys," and an unconstrained raw
+// uuid column would be worse) — see docs/ARCHITECTURE.md's Phase 5
+// section for the full record of that decision.
 export const transactions = pgTable(
   "transactions",
   {
@@ -79,9 +79,22 @@ export const transactions = pgTable(
     // engine's "category changes" signal (Phase 6) just compares strings.
     category: varchar("category", { length: 100 }).notNull(),
 
-    // Free-text customer/vendor name (brief section 12/28). Not a `customerId`
-    // FK — `customers` doesn't exist until Phase 5 (see note below) — so
-    // this is deliberately a plain label, not a relationship, until then.
+    // customerId is optional — a one-off transaction never needs a
+    // customer record just to exist. onDelete: "set null" (see the
+    // table-level comment above): deleting a customer never deletes or
+    // blocks deletion of transaction history.
+    customerId: uuid("customer_id").references(() => customers.id, { onDelete: "set null" }),
+
+    // Free-text customer/vendor label. No longer the only way to record
+    // who a transaction was with (customerId links to a real customer
+    // record, added in Phase 5) but deliberately still independent, not
+    // required, and not overwritten to always mirror the linked
+    // customer's current name — a renamed customer shouldn't silently
+    // rewrite what historical transactions say happened. When a
+    // transaction is created via the customer picker, this is
+    // pre-filled from the customer's name at that moment as a
+    // convenience default, same as any other form default; editing it
+    // afterward doesn't touch customerId or vice versa.
     counterparty: varchar("counterparty", { length: 255 }),
     paymentMethod: varchar("payment_method", { length: 50 }),
 
@@ -109,5 +122,8 @@ export const transactions = pgTable(
     // Covers the common "list this org's transactions, most recent first"
     // query without a separate single-column date index.
     index("transactions_org_id_date_idx").on(table.organizationId, table.date),
+    // Customer detail page's "transaction history" query — always
+    // scoped to one customer, most recent first.
+    index("transactions_customer_id_idx").on(table.customerId, table.date),
   ]
 );

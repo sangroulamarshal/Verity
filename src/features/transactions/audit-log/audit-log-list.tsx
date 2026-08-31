@@ -23,6 +23,7 @@ const FIELD_LABELS: Record<string, string> = {
   paymentMethod: "Payment method",
   description: "Description",
   referenceId: "Reference",
+  customerId: "Linked customer",
 };
 
 function formatChangeValue(field: string, value: unknown): string {

@@ -9,6 +9,7 @@ import {
   getTransactionById,
 } from "@/server/services/transactions";
 import { getOrganization } from "@/server/services/organizations";
+import { getCustomerById } from "@/server/services/customers";
 import { FxRateUnavailableError } from "@/server/services/fx";
 import { auditLogSafely } from "@/server/services/audit-log";
 import { logServerError } from "@/server/log";
@@ -38,6 +39,7 @@ export interface TransactionFormState {
     paymentMethod?: string;
     description?: string;
     referenceId?: string;
+    customerId?: string;
   };
 }
 
@@ -68,6 +70,7 @@ function parseTransactionFormData(formData: FormData) {
     description: get("description"),
     referenceId: get("referenceId"),
     presetId: get("presetId"),
+    customerId: get("customerId"),
   });
 }
 
@@ -82,12 +85,44 @@ function rawFormValues(formData: FormData): TransactionFormState["values"] {
     paymentMethod: formData.get("paymentMethod")?.toString(),
     description: formData.get("description")?.toString(),
     referenceId: formData.get("referenceId")?.toString(),
+    customerId: formData.get("customerId")?.toString(),
   };
 }
 
 /** FX failure -> a form-level message, never a saved guess. Brief section 25. */
 function fxErrorMessage(error: FxRateUnavailableError, baseCurrency: string): string {
   return `Could not convert to ${baseCurrency}: exchange rate for ${error.sourceCurrency} \u2192 ${error.targetCurrency} is unavailable right now. Please try again shortly.`;
+}
+
+/**
+ * Unlike presetId (an FK with no ownership check beyond the database's
+ * own FK constraint — see that field's schema comment), customerId gets
+ * an explicit check here before it's ever passed to createTransaction/
+ * updateTransaction. The difference: a customer's name/contact info is
+ * actually displayed and joined against elsewhere (the customer detail
+ * page, transaction lists) — presetId is pure provenance, never
+ * resolved back to another organization's data in any UI. Letting a
+ * cross-organization customerId slip through here, even though the FK
+ * constraint alone would technically allow it to insert, would link
+ * this transaction to another org's customer record.
+ *
+ * Deliberately fails soft, not loud: customerId is a hidden field set
+ * by the picker's own JS, never something the person directly typed
+ * (see customer-picker.tsx), so there's no meaningful form field to
+ * show a validation error against — same "invisible field" problem the
+ * presetId bug documented elsewhere in this file was about. An
+ * unresolvable customerId (stale picker state, a customer deleted
+ * between page load and submit, or actual tampering) just isn't linked;
+ * the transaction still saves with whatever counterparty text was
+ * typed, exactly as if no customer had been picked at all.
+ */
+async function resolveCustomerId(
+  organizationId: string,
+  customerId: string | undefined
+): Promise<string | undefined> {
+  if (!customerId) return undefined;
+  const customer = await getCustomerById(organizationId, customerId);
+  return customer?.id;
 }
 
 /**
@@ -174,12 +209,18 @@ export async function createTransactionAction(
       return validationFailureState(parsed.error.flatten().fieldErrors, formData);
     }
 
-    const organization = await getOrganization(session.organizationId);
+    const [organization, customerId] = await Promise.all([
+      getOrganization(session.organizationId),
+      resolveCustomerId(session.organizationId, parsed.data.customerId),
+    ]);
     const baseCurrency = organization?.baseCurrency ?? "GBP";
 
     let row;
     try {
-      row = await createTransaction(session.organizationId, baseCurrency, parsed.data);
+      row = await createTransaction(session.organizationId, baseCurrency, {
+        ...parsed.data,
+        customerId,
+      });
     } catch (error) {
       if (error instanceof FxRateUnavailableError) {
         return { message: fxErrorMessage(error, baseCurrency), values: rawFormValues(formData) };
@@ -211,6 +252,7 @@ export async function createTransactionAction(
         counterparty: row.counterparty,
         description: row.description,
         referenceId: row.referenceId,
+        customerId: row.customerId,
       },
     });
 
@@ -260,14 +302,19 @@ export async function updateTransactionAction(
       return validationFailureState(parsed.error.flatten().fieldErrors, formData);
     }
 
-    const organization = await getOrganization(session.organizationId);
+    const [organization, customerId, before] = await Promise.all([
+      getOrganization(session.organizationId),
+      resolveCustomerId(session.organizationId, parsed.data.customerId),
+      getTransactionById(session.organizationId, id),
+    ]);
     const baseCurrency = organization?.baseCurrency ?? "GBP";
-
-    const before = await getTransactionById(session.organizationId, id);
 
     let row;
     try {
-      row = await updateTransaction(session.organizationId, baseCurrency, id, parsed.data);
+      row = await updateTransaction(session.organizationId, baseCurrency, id, {
+        ...parsed.data,
+        customerId,
+      });
     } catch (error) {
       if (error instanceof FxRateUnavailableError) {
         return { message: fxErrorMessage(error, baseCurrency), values: rawFormValues(formData) };
@@ -365,6 +412,7 @@ export async function deleteTransactionAction(id: string): Promise<DeleteTransac
         counterparty: row.counterparty,
         description: row.description,
         referenceId: row.referenceId,
+        customerId: row.customerId,
       },
     });
 

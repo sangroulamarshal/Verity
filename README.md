@@ -16,7 +16,7 @@ Built in phases — see the status list on the home page, or the table below.
 | 2 | Authentication | ✅ Done |
 | 3 | Transactions + manual entry | ✅ Done |
 | 4 | CSV/Excel import + normalization | ✅ Done |
-| 5 | Customer CRM | Pending |
+| 5 | Customer CRM | ✅ Done |
 | 6 | Risk & anomaly engine | Pending |
 | 7 | Cash-flow forecasting | Pending |
 | 8 | Dashboard integration | Pending |

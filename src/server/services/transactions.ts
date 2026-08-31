@@ -17,6 +17,11 @@ export interface ManualTransactionInput {
   counterparty?: string;
   paymentMethod?: string;
   presetId?: string;
+  /** Validated by the caller (features/transactions/actions.ts) to
+   * belong to this organization before this is ever reached — see that
+   * file's comment on why, unlike presetId, this needed an explicit
+   * ownership check rather than relying on the FK constraint alone. */
+  customerId?: string;
 }
 
 export interface ListTransactionsOptions {
@@ -29,6 +34,9 @@ export interface ListTransactionsOptions {
    * compounded with organizationId below like every other condition, so
    * an id from another organization simply matches zero rows. */
   transactionId?: string;
+  /** Every transaction linked to one customer — the customer detail
+   * page's transaction-history section. */
+  customerId?: string;
   type?: "INCOME" | "EXPENSE";
   category?: string;
   currency?: string;
@@ -107,6 +115,7 @@ export async function createTransaction(
       description: input.description ?? null,
       referenceId: input.referenceId ?? null,
       presetId: input.presetId ?? null,
+      customerId: input.customerId ?? null,
       source: "MANUAL",
     })
     .returning();
@@ -125,6 +134,7 @@ export async function listTransactions(
   const conditions = [eq(transactions.organizationId, organizationId)];
 
   if (options.transactionId) conditions.push(eq(transactions.id, options.transactionId));
+  if (options.customerId) conditions.push(eq(transactions.customerId, options.customerId));
   if (options.type) conditions.push(eq(transactions.type, options.type));
   if (options.category) conditions.push(eq(transactions.category, options.category));
   if (options.currency) conditions.push(eq(transactions.currency, options.currency));
@@ -227,6 +237,7 @@ export async function updateTransaction(
       paymentMethod: input.paymentMethod ?? null,
       description: input.description ?? null,
       referenceId: input.referenceId ?? null,
+      customerId: input.customerId ?? null,
       updatedAt: new Date(),
     })
     .where(and(eq(transactions.id, id), eq(transactions.organizationId, organizationId)))

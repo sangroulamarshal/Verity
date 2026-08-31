@@ -283,6 +283,93 @@ database rows.
   since the sandbox's network egress doesn't allow downloading
   Playwright's browser binaries.
 
+## What Phase 5 added
+
+- **Schema**: `customers` (`organizationId` FK, `name`, optional
+  `email`/`phone`/`notes`) and `transactions.customerId` — the FK
+  `transactions.ts`'s own Phase 3 comment had explicitly reserved for
+  this phase, since an FK to a table that didn't exist yet wasn't
+  possible and an unconstrained raw uuid column would have violated
+  "every table holding financial data uses foreign keys." One
+  `customers` table, not split into customers/vendors: `counterparty`
+  has always represented both directions (who paid the org, who the org
+  paid), with direction carried by the transaction's own `type`, not by
+  the counterparty — splitting this table by kind would force a
+  distinction that isn't real, since a single record can legitimately be
+  both. `onDelete: "set null"` on `customerId`, matching `presetId`'s
+  existing pattern: deleting a customer must never delete or block
+  deleting the transaction history that happened with them.
+- **`counterparty` (free text) is kept, not replaced.** `customerId` is
+  optional and additive — a one-off transaction never needs a customer
+  record just to exist, and linking to a customer doesn't overwrite or
+  require re-syncing `counterparty` afterward. A renamed customer
+  doesn't silently rewrite what past transactions say happened; picking
+  a customer just pre-fills `counterparty` as a convenience default at
+  that moment, same as any other form default.
+- **Customer picker, not a plain `<select>`.** Phase 3's own note on
+  `Select` ("a styled native `<select>` is fully accessible and needs
+  nothing extra... worth revisiting once Phase 5's customer picker needs
+  a searchable list") is the reason `features/transactions/
+  customer-picker.tsx` is a hand-rolled debounced combobox rather than
+  either a native select or a new dependency — Radix's menu primitives
+  are built for click-triggered menus, not a text-input-driven listbox,
+  so this follows the same pattern `exchange-rate-preview.tsx` already
+  established for a debounced live lookup (staleness-guarded by tagging
+  each result with the exact query it was fetched for).
+- **customerId gets a real ownership check unlike presetId.** `presetId`
+  is pure provenance — never resolved back to another organization's
+  data in any UI — so it relies on the database's own FK constraint
+  alone with no application-level check. `customerId` is different: a
+  linked customer's name/contact info is actually displayed and joined
+  against (the customer detail page, transaction lists), so
+  `features/transactions/actions.ts`'s `resolveCustomerId` explicitly
+  verifies the submitted id belongs to the caller's organization before
+  it's ever passed to `createTransaction`/`updateTransaction` — closing
+  what would otherwise be a real cross-organization linking gap that the
+  FK constraint alone doesn't prevent. Fails soft, not loud: `customerId`
+  is a hidden field set by the picker's own JS, never something the
+  person directly typed, so an unresolvable id (stale picker state, a
+  customer deleted mid-session) just isn't linked — the transaction
+  still saves with whatever `counterparty` text was typed, same as if no
+  customer had been picked at all.
+- **Org-scoping**: `server/services/customers.ts` follows the identical
+  pattern as `transactions.ts` — every function takes `organizationId`
+  explicitly and bakes it into every query's `WHERE`, including
+  `UPDATE`/`DELETE`; `getCustomerSummary`'s aggregation query checks both
+  `organizationId` and `customerId` rather than trusting the FK match
+  alone, consistent with never trusting a single condition by itself
+  anywhere in this codebase.
+- **Lifetime summary uses `baseAmount`, not each transaction's own
+  currency** — same reasoning as `getDashboardSummary`: every
+  transaction already carries one consistent base-currency snapshot, so
+  a customer who's been paid in three different currencies still gets
+  one real total with no per-row FX lookup needed at read time.
+- **New permission**: `canWriteCustomers` in `lib/permissions.ts`, kept
+  as its own function (same OWNER/ADMIN/FINANCE roles as
+  `canWriteTransactions`) rather than reusing that function's name for a
+  different noun — consistent with this file's one-function-per-domain
+  pattern (brief section 37).
+- **Layering discipline**: the customer picker needed search results
+  from `server/services/customers.ts`, but importing
+  `features/customers/actions.ts`'s action directly from
+  `features/transactions/` would have violated the layering rule ("no
+  cross-feature imports"). `features/transactions/
+  customer-search-action.ts` is the transactions feature's own thin
+  Server Action wrapper around the same service function instead — two
+  one-line entry points, one real implementation.
+- **Testing**: `features/customers/schema.test.ts` covers the Zod schema
+  (including the empty-string-vs-invalid-email edge case the
+  optional-email field's `.optional().or(z.literal(""))` composition
+  depends on). As with every prior phase, the database-dependent parts
+  (cross-organization isolation, the customer-summary aggregation, the
+  picker's live search) need a real Postgres instance to verify end to
+  end and weren't executable from this build sandbox; `e2e/
+  customers.spec.ts` covers create/edit/delete, the detail page, linking
+  a transaction to a customer through the picker, and cross-organization
+  isolation, written and ready but — like every other e2e spec in this
+  codebase — couldn't be run here since the sandbox's network egress
+  doesn't allow downloading Playwright's browser binaries.
+
 ## Design system update (post–Phase 3)
 
 The palette was deliberately changed from the original restrained-teal

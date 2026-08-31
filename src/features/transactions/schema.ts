@@ -95,6 +95,12 @@ export const transactionSchema = z.object({
   description: optionalText(2000, "Must be at most 2000 characters."),
   referenceId: optionalText(255, "Must be at most 255 characters."),
   presetId: optionalText(255, "Invalid preset."),
+  // Format-only here (see the actions.ts comment on why an FK/ownership
+  // check can't live in a pure Zod schema) — a uuid-shaped string or
+  // nothing. The real "does this customer exist and belong to this
+  // organization" check happens in features/transactions/actions.ts
+  // right before it's persisted.
+  customerId: optionalText(255, "Invalid customer."),
 });
 
 export type TransactionInput = z.infer<typeof transactionSchema>;

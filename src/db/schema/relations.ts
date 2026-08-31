@@ -4,6 +4,7 @@ import { users } from "./users";
 import { auditLogs } from "./audit-logs";
 import { transactions } from "./transactions";
 import { transactionPresets } from "./transaction-presets";
+import { customers } from "./customers";
 import { organizationInvites } from "./organization-invites";
 import { imports, importMappings } from "./imports";
 
@@ -14,6 +15,7 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   auditLogs: many(auditLogs),
   transactions: many(transactions),
   transactionPresets: many(transactionPresets),
+  customers: many(customers),
   invites: many(organizationInvites),
   imports: many(imports),
 }));
@@ -27,6 +29,18 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
     fields: [transactions.presetId],
     references: [transactionPresets.id],
   }),
+  customer: one(customers, {
+    fields: [transactions.customerId],
+    references: [customers.id],
+  }),
+}));
+
+export const customersRelations = relations(customers, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [customers.organizationId],
+    references: [organizations.id],
+  }),
+  transactions: many(transactions),
 }));
 
 export const transactionPresetsRelations = relations(transactionPresets, ({ one, many }) => ({

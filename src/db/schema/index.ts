@@ -2,10 +2,10 @@
 //   Phase 2 — organizations, users, sessions, audit_logs
 //   Phase 3 — transactions
 //   Phase 4 — imports, import_mappings
-//   Phase 4.5 — multi-currency, presets, members/roles,      <- this phase
+//   Phase 4.5 — multi-currency, presets, members/roles,
 //               org invites, settings (design/nav pass, no
 //               new domain phase number — see docs/ARCHITECTURE.md)
-//   Phase 5 — customers (also adds transactions.customerId as an FK)
+//   Phase 5 — customers, also adds transactions.customerId as an FK   <- this phase
 //   Phase 6 — risk_events
 //   Phase 7 — cashflow_forecasts
 //
@@ -17,6 +17,7 @@ export * from "./organizations";
 export * from "./users";
 export * from "./audit-logs";
 export * from "./transaction-presets";
+export * from "./customers";
 export * from "./transactions";
 export * from "./fx-rates";
 export * from "./organization-invites";

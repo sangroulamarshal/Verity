@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   ArrowLeftRight,
+  Users,
   Upload,
   Settings as SettingsIcon,
   Menu,
@@ -30,13 +31,20 @@ interface NavGroup {
   items: NavItem[];
 }
 
-// Only routes that exist today. Risk / Cash Flow / Customers have no
-// section here on purpose — they don't have pages yet (see README phase
-// table), and a nav item that 404s, or worse, opens a page full of
-// invented numbers, is worse than no nav item at all.
+// Only routes that exist today. Risk / Cash Flow have no section here
+// on purpose — they don't have pages yet (see README phase table), and
+// a nav item that 404s, or worse, opens a page full of invented
+// numbers, is worse than no nav item at all. Customers (Phase 5) moved
+// out of that list once its pages actually shipped.
 const NAV_GROUPS: NavGroup[] = [
   { label: null, items: [{ href: "/dashboard", label: "Overview", icon: LayoutDashboard }] },
-  { label: "Business", items: [{ href: "/transactions", label: "Transactions", icon: ArrowLeftRight }] },
+  {
+    label: "Business",
+    items: [
+      { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
+      { href: "/customers", label: "Customers", icon: Users },
+    ],
+  },
   { label: "Data", items: [{ href: "/imports", label: "Imports", icon: Upload }] },
   { label: "System", items: [{ href: "/settings/account", label: "Settings", icon: SettingsIcon }] },
 ];

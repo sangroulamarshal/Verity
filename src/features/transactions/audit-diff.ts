@@ -20,6 +20,7 @@ const DIFFED_FIELDS = [
   "paymentMethod",
   "description",
   "referenceId",
+  "customerId",
 ] as const satisfies readonly (keyof Transaction)[];
 
 export interface FieldChange {
