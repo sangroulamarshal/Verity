@@ -8,6 +8,7 @@ import {
   ArrowLeftRight,
   Users,
   Upload,
+  ShieldAlert,
   Settings as SettingsIcon,
   Menu,
   X,
@@ -31,11 +32,12 @@ interface NavGroup {
   items: NavItem[];
 }
 
-// Only routes that exist today. Risk / Cash Flow have no section here
-// on purpose — they don't have pages yet (see README phase table), and
-// a nav item that 404s, or worse, opens a page full of invented
-// numbers, is worse than no nav item at all. Customers (Phase 5) moved
-// out of that list once its pages actually shipped.
+// Only routes that exist today. Cash Flow has no section here on
+// purpose — it doesn't have a page yet (see README phase table), and a
+// nav item that 404s, or worse, opens a page full of invented numbers,
+// is worse than no nav item at all. Customers (Phase 5) and Risk
+// (Phase 6) moved out of that "doesn't exist yet" category once their
+// pages actually shipped.
 const NAV_GROUPS: NavGroup[] = [
   { label: null, items: [{ href: "/dashboard", label: "Overview", icon: LayoutDashboard }] },
   {
@@ -43,6 +45,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
       { href: "/customers", label: "Customers", icon: Users },
+      { href: "/risk", label: "Risk", icon: ShieldAlert },
     ],
   },
   { label: "Data", items: [{ href: "/imports", label: "Imports", icon: Upload }] },
@@ -107,9 +110,10 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
 function Brand() {
   return (
     <Link href="/dashboard" className="flex items-center gap-2.5 px-3">
-      <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-base font-bold text-primary-foreground">
-        V
-      </span>
+      {/* eslint-disable-next-line @next/next/no-img-element -- a small,
+          static brand mark; next/image's optimization pipeline isn't
+          warranted for a single fixed-size asset used once per page. */}
+      <img src="/logo-mark.png" alt="" width={32} height={32} className="size-8 shrink-0" />
       <span className="text-base font-semibold tracking-tight">Verity</span>
     </Link>
   );
