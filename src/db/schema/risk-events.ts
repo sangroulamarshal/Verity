@@ -9,10 +9,10 @@ import {
 import { organizations } from "./organizations";
 import { transactions } from "./transactions";
 import { users } from "./users";
-import { riskLevelEnum, riskStatusEnum } from "./enums";
+import { riskLevelEnum, riskStatusEnum, riskConfidenceEnum } from "./enums";
 import type { RiskSignal } from "@/server/engines/risk-engine";
 
-export { riskLevelEnum, riskStatusEnum };
+export { riskLevelEnum, riskStatusEnum, riskConfidenceEnum };
 
 // One row per risk evaluation, append-only — never updated or deleted
 // once written (see server/services/risk.ts). This is what makes risk
@@ -40,6 +40,14 @@ export const riskEvents = pgTable(
 
     score: numeric("score", { precision: 5, scale: 2, mode: "number" }).notNull(),
     level: riskLevelEnum("level").notNull(),
+    // How much historical data backed the dominant signal behind this
+    // score/level — see enums.ts's comment on why this is a separate
+    // scale from `level`, not folded into it. Defaults to MEDIUM only
+    // to backfill any pre-existing row from before this column existed
+    // (there is no way to retroactively know their real confidence);
+    // every row written going forward always supplies a real value
+    // (server/services/risk.ts never omits it).
+    confidence: riskConfidenceEnum("confidence").notNull().default("MEDIUM"),
     status: riskStatusEnum("status").notNull().default("UNREVIEWED"),
 
     // Array of { type, points, explanation } — see

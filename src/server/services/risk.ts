@@ -4,7 +4,8 @@ import { db } from "@/db/client";
 import { transactions, riskEvents, customers } from "@/db/schema";
 import {
   evaluateTransactionRisk,
-  type AmountReference,
+  type AmountBaseline,
+  type Confidence,
   type RiskEvaluationInput,
   type RiskEvaluationResult,
   type RiskLevel,
@@ -12,7 +13,12 @@ import {
 } from "@/server/engines/risk-engine";
 import { logServerError } from "@/server/log";
 
-export type { RiskEvaluationResult, RiskLevel, RiskSignal } from "@/server/engines/risk-engine";
+export type {
+  RiskEvaluationResult,
+  RiskLevel,
+  RiskSignal,
+  Confidence,
+} from "@/server/engines/risk-engine";
 export type RiskStatus = "UNREVIEWED" | "REVIEWED" | "DISMISSED";
 
 type TransactionRow = typeof transactions.$inferSelect;
@@ -28,26 +34,72 @@ const DUPLICATE_AMOUNT_TOLERANCE = "0.01";
 const NEW_CUSTOMER_DAYS = 14;
 const NEW_CUSTOMER_MIN_TRANSACTIONS = 2;
 
+// Below this, MAD is floor-protected to at least median * MAD_FLOOR_RATIO
+// (or MAD_ABSOLUTE_FLOOR when the median itself is ~0) — otherwise a
+// cluster of near-identical historical amounts (a subscription paid at
+// the same figure every time, say) would produce a MAD of ~0, and any
+// tiny real variation would compute as an enormous, spurious z-score.
+// 5% of the median is a conservative floor: real variation smaller than
+// that essentially never carries anomaly meaning for financial amounts.
+const MAD_FLOOR_RATIO = 0.05;
+// A tiny absolute floor purely to avoid a literal divide-by-zero when
+// every historical amount (median included) is exactly 0 — not meant to
+// be a meaningful threshold on its own. Amounts are stored to 2 decimal
+// places (schema/transactions.ts), so 0.01 is the smallest unit that
+// can exist regardless of currency.
+const MAD_ABSOLUTE_FLOOR = 0.01;
+const MIN_BASELINE_SAMPLE = 2;
+
 /**
  * Every reference stat below is computed from `baseAmount` — the
  * organization-base-currency snapshot every transaction already carries
  * (server/services/fx.ts) — never the original per-transaction `amount`.
  * This is what makes comparing a NPR customer's history against a USD
  * transaction safe: baseAmount already expresses every row in one common
- * currency, so a plain average/sum is correct without converting
+ * currency, so a plain median/MAD is correct without converting
  * anything at query time. Brief's multi-currency requirement is
  * satisfied by reusing this existing column, not by adding new
  * conversion logic.
+ *
+ * Uses median (not mean) for the baseline itself, and MAD (median
+ * absolute deviation, not standard deviation) for its spread — both are
+ * robust to a single outlier sitting in the historical data, which a
+ * mean/stddev pair is not. This matters concretely: without it, one
+ * genuinely huge transaction would pull the mean upward and inflate the
+ * stddev for every *subsequent* transaction evaluated against that same
+ * history, silently raising the bar for what counts as anomalous going
+ * forward (the "does an enormous transaction distort the baseline for
+ * future transactions" failure mode). Costs two aggregate queries
+ * instead of one (median needs to be known before computing deviations
+ * from it) — still O(1) queries, not a per-row scan, and negligible at
+ * SME transaction volumes.
  */
-async function amountReference(conditions: ReturnType<typeof and>): Promise<AmountReference> {
-  const [row] = await db
+async function amountBaseline(conditions: ReturnType<typeof and>): Promise<AmountBaseline> {
+  const [medianRow] = await db
     .select({
-      mean: sql<string>`coalesce(avg(${transactions.baseAmount}), 0)`,
+      median: sql<string | null>`percentile_cont(0.5) within group (order by ${transactions.baseAmount})`,
       sampleSize: sql<string>`count(*)`,
     })
     .from(transactions)
     .where(conditions);
-  return { mean: Number(row?.mean ?? 0), sampleSize: Number(row?.sampleSize ?? 0) };
+
+  const sampleSize = Number(medianRow?.sampleSize ?? 0);
+  if (sampleSize < MIN_BASELINE_SAMPLE || medianRow?.median == null) {
+    return { median: 0, mad: 0, sampleSize };
+  }
+  const median = Number(medianRow.median);
+
+  const [madRow] = await db
+    .select({
+      mad: sql<string | null>`percentile_cont(0.5) within group (order by abs(${transactions.baseAmount}::numeric - ${median}))`,
+    })
+    .from(transactions)
+    .where(conditions);
+
+  const rawMad = Number(madRow?.mad ?? 0);
+  const mad = Math.max(rawMad, median * MAD_FLOOR_RATIO, MAD_ABSOLUTE_FLOOR);
+
+  return { median, mad, sampleSize };
 }
 
 async function frequencyContext(organizationId: string, customerId: string | null, createdAt: Date) {
@@ -178,14 +230,21 @@ async function categoryTrendContext(
       .groupBy(sql`to_char(${transactions.date}::date, 'YYYY-MM')`),
   ]);
 
-  const priorTotals = priorRows.map((r) => Number(r.total));
+  const priorTotals = priorRows.map((r) => Number(r.total)).sort((a, b) => a - b);
   const periodsOfHistory = priorTotals.length;
-  const averagePriorPeriodTotal =
-    periodsOfHistory > 0 ? priorTotals.reduce((a, b) => a + b, 0) / periodsOfHistory : 0;
+  // Median, not mean — one unusually large prior month (itself possibly
+  // containing an anomalous transaction) shouldn't permanently inflate
+  // what counts as "normal" for every month compared against it after.
+  const medianPriorPeriodTotal =
+    periodsOfHistory === 0
+      ? 0
+      : periodsOfHistory % 2 === 1
+        ? priorTotals[(periodsOfHistory - 1) / 2]
+        : (priorTotals[periodsOfHistory / 2 - 1] + priorTotals[periodsOfHistory / 2]) / 2;
 
   return {
     currentPeriodTotal: Number(currentRow?.total ?? 0),
-    averagePriorPeriodTotal,
+    medianPriorPeriodTotal,
     periodsOfHistory,
   };
 }
@@ -232,16 +291,16 @@ export async function evaluateAndStoreRisk(
     .limit(1);
   if (!row) return null;
 
-  const [organizationRef, categoryRef, customerRef, frequency, duplicates, categoryTrend, newCustomer] =
+  const [organizationBaseline, categoryBaseline, customerBaseline, frequency, duplicates, categoryTrend, newCustomer] =
     await Promise.all([
-      amountReference(
+      amountBaseline(
         and(
           eq(transactions.organizationId, organizationId),
           eq(transactions.type, row.type),
           ne(transactions.id, transactionId)
         )
       ),
-      amountReference(
+      amountBaseline(
         and(
           eq(transactions.organizationId, organizationId),
           eq(transactions.type, row.type),
@@ -250,7 +309,7 @@ export async function evaluateAndStoreRisk(
         )
       ),
       row.customerId
-        ? amountReference(
+        ? amountBaseline(
             and(
               eq(transactions.organizationId, organizationId),
               eq(transactions.type, row.type),
@@ -270,9 +329,9 @@ export async function evaluateAndStoreRisk(
     source: row.source,
     hasCustomer: row.customerId !== null,
     isNewOrInactiveCustomer: newCustomer,
-    organizationAmountRef: organizationRef,
-    categoryAmountRef: categoryRef,
-    customerAmountRef: customerRef,
+    organizationAmountBaseline: organizationBaseline,
+    categoryAmountBaseline: categoryBaseline,
+    customerAmountBaseline: customerBaseline,
     frequency,
     duplicateMatchCount: duplicates,
     categoryTrend,
@@ -286,6 +345,7 @@ export async function evaluateAndStoreRisk(
       transactionId,
       score: result.score,
       level: result.level,
+      confidence: result.confidence,
       status: "UNREVIEWED",
       signals: result.signals,
     });
@@ -593,6 +653,7 @@ export interface RiskHistoryEntry {
   id: string;
   score: number;
   level: RiskLevel;
+  confidence: Confidence;
   status: RiskStatus;
   signals: RiskSignal[];
   reviewedByUserId: string | null;
@@ -612,6 +673,7 @@ export async function getRiskHistoryForTransaction(
       id: riskEvents.id,
       score: riskEvents.score,
       level: riskEvents.level,
+      confidence: riskEvents.confidence,
       status: riskEvents.status,
       signals: riskEvents.signals,
       reviewedByUserId: riskEvents.reviewedByUserId,

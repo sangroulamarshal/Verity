@@ -12,6 +12,8 @@ import { formatCurrency, formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Risk detail" };
 
+const CONFIDENCE_LABELS: Record<string, string> = { LOW: "Low", MEDIUM: "Medium", HIGH: "High" };
+
 export default async function RiskDetailPage(props: PageProps<"/risk/[transactionId]">) {
   const session = await verifySession();
   const { transactionId } = await props.params;
@@ -55,12 +57,20 @@ export default async function RiskDetailPage(props: PageProps<"/risk/[transactio
             <p className="text-3xl font-semibold tabular-nums">{latest.score}</p>
             <span className="text-sm text-muted-foreground">/ 100</span>
             <RiskLevelBadge level={latest.level} />
+            <span className="text-xs text-muted-foreground">
+              Confidence: {CONFIDENCE_LABELS[latest.confidence]}
+            </span>
             {previous && previous.level !== latest.level && (
               <span className="text-xs text-muted-foreground">
                 (was {previous.score} &mdash; {previous.level})
               </span>
             )}
           </div>
+          <p className="-mt-3 text-xs text-muted-foreground">
+            This score is ordinal, not a probability — it reflects how much evidence accumulated
+            against the thresholds below, not a percentage chance of fraud. Confidence reflects how
+            much historical data backed the strongest signal found.
+          </p>
 
           <div>
             <p className="mb-2 text-sm font-medium">Why</p>

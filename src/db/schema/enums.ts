@@ -27,3 +27,11 @@ export const riskLevelEnum = pgEnum("risk_level", ["LOW", "MEDIUM", "HIGH", "CRI
 // explicit user action (see server/services/risk.ts), never assigned by
 // the scoring engine itself.
 export const riskStatusEnum = pgEnum("risk_status", ["UNREVIEWED", "REVIEWED", "DISMISSED"]);
+
+// How much historical data backed a risk evaluation's dominant signal
+// (see server/engines/risk-engine.ts's confidence-vs-severity note) —
+// deliberately separate from riskLevelEnum: an evaluation can be
+// CRITICAL severity with LOW confidence (an extreme anomaly against
+// thin history), and collapsing that into one scale would hide exactly
+// the uncertainty a reviewer needs to see.
+export const riskConfidenceEnum = pgEnum("risk_confidence", ["LOW", "MEDIUM", "HIGH"]);
