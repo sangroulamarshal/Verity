@@ -1,11 +1,21 @@
 import type { Metadata } from "next";
-import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
+import "@fontsource/ibm-plex-sans/400.css";
+import "@fontsource/ibm-plex-sans/500.css";
+import "@fontsource/ibm-plex-sans/600.css";
+import "@fontsource/ibm-plex-sans/700.css";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
-// Self-hosted font files (no build-time fetch to Google Fonts) — one less
-// external network dependency for both this build and CI.
+// IBM Plex Sans/Mono, self-hosted via @fontsource (font files ship
+// inside the npm package itself — no build- or run-time request to
+// Google Fonts or any other external host, same "no external network
+// dependency" property the previous Geist setup had). Chosen over a
+// generic geometric sans for its actual brand fit: IBM Plex reads as
+// deliberately institutional/financial rather than "generic AI SaaS
+// template" — see globals.css's design-tokens comment for the full
+// reasoning behind this pass's color + type choices.
 
 export const metadata: Metadata = {
   title: "Verity",
@@ -17,7 +27,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}
+      className="h-full antialiased"
       suppressHydrationWarning
     >
       <body
