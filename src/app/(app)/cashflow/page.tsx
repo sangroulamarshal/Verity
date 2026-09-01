@@ -84,12 +84,12 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
   const delta = deltaLabel(openingDisplay, closingDisplay);
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-8">
+    <div className="mx-auto w-full max-w-[1280px] px-6 py-6">
       {/* Page header */}
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Cash Flow</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
+          <h1 className="text-[18px] font-semibold tracking-tight">Cash Flow</h1>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">
             Based on recorded transactions, recurring commitments, and outstanding invoices.
             {rateUnavailable && (
               <span className="ml-1">
@@ -127,7 +127,7 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
       ) : (
         <>
           {/* KPI row */}
-          <div className="grid gap-3 sm:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs font-medium text-muted-foreground">
