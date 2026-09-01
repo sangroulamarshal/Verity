@@ -35,3 +35,32 @@ export const riskStatusEnum = pgEnum("risk_status", ["UNREVIEWED", "REVIEWED", "
 // thin history), and collapsing that into one scale would hide exactly
 // the uncertainty a reviewer needs to see.
 export const riskConfidenceEnum = pgEnum("risk_confidence", ["LOW", "MEDIUM", "HIGH"]);
+
+// Phase 7B — Invoice Intelligence.
+//
+// Seven states matching the brief's invoice lifecycle exactly:
+//
+//   DRAFT        — created but not yet sent; not yet a financial commitment.
+//                  A draft invoice must NOT contribute to forecast income.
+//   SENT         — delivered to the customer; awaiting payment.
+//   VIEWED       — the customer has opened/acknowledged the invoice.
+//   PARTIALLY_PAID — partial payment received; remaining amount is still owed.
+//   PAID         — fully settled; must NOT appear as future expected income
+//                  (money has already arrived — counting it again would
+//                  double-count it against actual recorded INCOME transactions).
+//   OVERDUE      — past due date and unpaid; included in forecast cautiously
+//                  based on customer payment history.
+//   CANCELLED    — void; excluded from all forecasts.
+//
+// Only SENT, VIEWED, PARTIALLY_PAID, and OVERDUE contribute to
+// expected future cash — see server/services/invoices.ts for the
+// exact filtering logic.
+export const invoiceStatusEnum = pgEnum("invoice_status", [
+  "DRAFT",
+  "SENT",
+  "VIEWED",
+  "PARTIALLY_PAID",
+  "PAID",
+  "OVERDUE",
+  "CANCELLED",
+]);

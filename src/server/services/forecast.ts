@@ -11,6 +11,7 @@ import {
   type HistoricalPattern,
   type RecurringTemplate,
 } from "@/server/engines/forecast-engine";
+import { getOutstandingInvoicesAsScheduledItems } from "@/server/services/invoices";
 
 export type { ForecastResult, ForecastHorizon } from "@/server/engines/forecast-engine";
 
@@ -261,12 +262,16 @@ export async function getForecast(
   // History window: last HISTORY_DAYS of actuals
   const historyStart = addDays(asOfDate, -HISTORY_DAYS);
 
+  const endDate = addDays(startDate, horizon - 1);
+
   // Run all DB queries in parallel — independent of each other
-  const [openingBalance, historicalPattern, recurringTemplates] = await Promise.all([
-    getCurrentCashPosition(organizationId, asOfDate),
-    getHistoricalPattern(organizationId, historyStart, asOfDate),
-    getPresetsAsTemplates(organizationId, baseCurrency),
-  ]);
+  const [openingBalance, historicalPattern, recurringTemplates, scheduledItems] =
+    await Promise.all([
+      getCurrentCashPosition(organizationId, asOfDate),
+      getHistoricalPattern(organizationId, historyStart, asOfDate),
+      getPresetsAsTemplates(organizationId, baseCurrency),
+      getOutstandingInvoicesAsScheduledItems(organizationId, startDate, endDate),
+    ]);
 
   const presetCategories = new Set<string>(recurringTemplates.map((t) => t.category));
 
@@ -276,7 +281,7 @@ export async function getForecast(
     startDate,
     horizon,
     recurringTemplates,
-    scheduledItems: [], // Phase 7B will populate this
+    scheduledItems,
     historicalPattern,
     presetCategories,
   };

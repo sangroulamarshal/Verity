@@ -8,6 +8,7 @@ import { customers } from "./customers";
 import { organizationInvites } from "./organization-invites";
 import { imports, importMappings } from "./imports";
 import { riskEvents } from "./risk-events";
+import { invoices } from "./invoices";
 
 export const organizationsRelations = relations(organizations, ({ many }) => ({
   // Was `one(users, ...)` — organizations now have many users (Members),
@@ -20,6 +21,7 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
   invites: many(organizationInvites),
   imports: many(imports),
   riskEvents: many(riskEvents),
+  invoices: many(invoices),
 }));
 
 export const transactionsRelations = relations(transactions, ({ one, many }) => ({
@@ -116,5 +118,20 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   user: one(users, {
     fields: [auditLogs.userId],
     references: [users.id],
+  }),
+}));
+
+export const invoicesRelations = relations(invoices, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [invoices.organizationId],
+    references: [organizations.id],
+  }),
+  customer: one(customers, {
+    fields: [invoices.customerId],
+    references: [customers.id],
+  }),
+  settledByTransaction: one(transactions, {
+    fields: [invoices.settledByTransactionId],
+    references: [transactions.id],
   }),
 }));
