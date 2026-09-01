@@ -53,10 +53,11 @@ export default async function DashboardPage() {
       .limit(1),
     getDashboardSummary(session.organizationId),
   ]);
-  const [riskSummary, forecastSummary] = await Promise.all([
-    getRiskSummary(session.organizationId),
-    getForecastSummary(session.organizationId, 30).catch(() => null),
-  ]);
+  // Sequential -- single connection pool (max:1) means Promise.all adds
+  // timeout risk with no parallelism benefit. getForecastSummary is
+  // wrapped in try/catch so a forecast failure never breaks the dashboard.
+  const riskSummary = await getRiskSummary(session.organizationId);
+  const forecastSummary = await getForecastSummary(session.organizationId, 30).catch(() => null);
 
   const baseCurrency = org?.baseCurrency ?? "GBP";
   const requestedCurrency = session.displayCurrency ?? baseCurrency;

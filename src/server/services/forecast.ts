@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, gte, lte, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { transactions, transactionPresets, organizations } from "@/db/schema";
 import {
@@ -185,6 +185,10 @@ async function getPresetsAsTemplates(
   organizationId: string,
   baseCurrency: string
 ): Promise<RecurringTemplate[]> {
+  // Single query: fetch all presets, then in one additional query get the
+  // most recent transaction per preset. Replaces the previous N+1 loop
+  // (one DB round-trip per preset) which caused connection timeouts when
+  // using the max:1 serverless pool.
   const presets = await db
     .select()
     .from(transactionPresets)
@@ -192,54 +196,56 @@ async function getPresetsAsTemplates(
 
   if (presets.length === 0) return [];
 
-  // For each preset, find the most recent transaction that used it
-  // (presetId FK is on transactions). We use its baseAmount/exchangeRate
-  // as the best available base-currency estimate.
-  const results: RecurringTemplate[] = [];
+  // One query for all preset IDs using inArray, then deduplicate in JS.
+  // Much cheaper than one DB round-trip per preset.
+  const presetIds = presets.map((p) => p.id);
+  const latestTxRows = await db
+    .select({
+      presetId: transactions.presetId,
+      baseAmount: transactions.baseAmount,
+      baseCurrency: transactions.baseCurrency,
+      date: transactions.date,
+    })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.organizationId, organizationId),
+        inArray(transactions.presetId, presetIds)
+      )
+    )
+    .orderBy(sql`${transactions.date} desc`)
+    .limit(presetIds.length * 20); // fetch recent rows, deduplicate below
 
-  for (const preset of presets) {
+  // Build a map: presetId -> most recent tx row (first occurrence wins
+  // because rows are ordered date desc).
+  const latestByPreset = new Map<string, typeof latestTxRows[0]>();
+  for (const row of latestTxRows) {
+    if (row.presetId && !latestByPreset.has(row.presetId)) {
+      latestByPreset.set(row.presetId, row);
+    }
+  }
+
+  return presets.map((preset) => {
     let monthlyAmount = Number(preset.amount);
     let typicalDayOfMonth = 0;
 
-    // Find the most recent transaction from this preset
-    const [latestTx] = await db
-      .select({
-        baseAmount: transactions.baseAmount,
-        baseCurrency: transactions.baseCurrency,
-        date: transactions.date,
-      })
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.organizationId, organizationId),
-          eq(transactions.presetId, preset.id)
-        )
-      )
-      .orderBy(sql`${transactions.date} desc`)
-      .limit(1);
-
+    const latestTx = latestByPreset.get(preset.id);
     if (latestTx && latestTx.baseCurrency === baseCurrency) {
       monthlyAmount = Number(latestTx.baseAmount);
       typicalDayOfMonth = Number(latestTx.date.slice(8, 10));
     } else if (preset.currency === baseCurrency) {
-      // Preset is already in base currency -- use its amount directly
       monthlyAmount = Number(preset.amount);
     }
-    // else: preset is in a foreign currency and has no transactions yet.
-    // We use the raw amount as a rough proxy -- acceptable since this will
-    // only apply to new/unused presets and confidence will be MEDIUM.
 
-    results.push({
+    return {
       id: preset.id,
       name: preset.name,
       type: preset.type,
       category: preset.category,
       monthlyAmount,
       typicalDayOfMonth,
-    });
-  }
-
-  return results;
+    };
+  });
 }
 
 // ----------------------------------------------------------------------------
@@ -339,21 +345,16 @@ export async function getForecast(
 
   const endDate = addDays(startDate, horizon - 1);
 
-  // Run all DB queries in parallel -- independent of each other.
-  // Seasonality adds a 5th query but still runs concurrently.
-  const [
-    openingBalance,
-    historicalPattern,
-    recurringTemplates,
-    scheduledItems,
-    seasonality,
-  ] = await Promise.all([
-    getCurrentCashPosition(organizationId, asOfDate),
-    getHistoricalPattern(organizationId, historyStart, asOfDate),
-    getPresetsAsTemplates(organizationId, baseCurrency),
-    getOutstandingInvoicesAsScheduledItems(organizationId, startDate, endDate),
-    getMonthlySeasonality(organizationId, asOfDate),
-  ]);
+  // Sequential awaits instead of Promise.all -- the DB client uses max:1
+  // connection per serverless instance (see db/client.ts). Promise.all
+  // gives zero real parallelism with a single connection; it only adds
+  // queue contention and risks hitting connectionTimeoutMillis (5s)
+  // before a queued query gets its turn. Sequential is correct and safe.
+  const openingBalance = await getCurrentCashPosition(organizationId, asOfDate);
+  const historicalPattern = await getHistoricalPattern(organizationId, historyStart, asOfDate);
+  const recurringTemplates = await getPresetsAsTemplates(organizationId, baseCurrency);
+  const scheduledItems = await getOutstandingInvoicesAsScheduledItems(organizationId, startDate, endDate);
+  const seasonality = await getMonthlySeasonality(organizationId, asOfDate);
 
   const presetCategories = new Set<string>(recurringTemplates.map((t) => t.category));
   const outstandingInvoiceCount = scheduledItems.filter((i) => i.source === "INVOICE").length;
