@@ -287,17 +287,6 @@ export function addDays(isoDate: string, n: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-function daysBetween(from: string, to: string): number {
-  const a = new Date(`${from}T00:00:00Z`);
-  const b = new Date(`${to}T00:00:00Z`);
-  return Math.round((b.getTime() - a.getTime()) / 86_400_000);
-}
-
-/** Return the day-of-month (1-31) for a YYYY-MM-DD string. */
-function dayOfMonth(isoDate: string): number {
-  return Number(isoDate.slice(8, 10));
-}
-
 /** Returns YYYY-MM-DD date range [start, end] inclusive. */
 function dateRange(start: string, days: number): string[] {
   return Array.from({ length: days }, (_, i) => addDays(start, i));
@@ -484,8 +473,6 @@ export function generateForecast(input: ForecastInput): ForecastResult {
   const allItems: ForecastItem[] = [];
 
   // 1. Recurring preset items
-  const presetCategories = new Set<string>(input.presetCategories);
-
   for (const template of input.recurringTemplates) {
     const occurrences = expandPreset(template, dates);
     for (const occ of occurrences) {

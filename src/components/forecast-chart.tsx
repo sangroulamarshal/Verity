@@ -2,12 +2,10 @@
 
 import * as React from "react";
 import type { ForecastDay } from "@/server/engines/forecast-engine";
-import { formatCurrency } from "@/lib/format";
 
 interface ForecastChartProps {
   days: ForecastDay[];
   openingBalance: number;
-  currency: string;
   /** Number of historical days to show before the forecast (from actuals). */
   historicalDays?: { date: string; balance: number }[];
 }
@@ -59,7 +57,6 @@ function shortDate(iso: string): string {
 export function ForecastChart({
   days,
   openingBalance,
-  currency,
   historicalDays = [],
 }: ForecastChartProps) {
   if (days.length === 0) {
@@ -74,7 +71,7 @@ export function ForecastChart({
   const allPoints: { date: string; balance: number; isForecast: boolean }[] = [
     ...historicalDays.map((h) => ({ ...h, isForecast: false })),
     { date: days[0].date, balance: openingBalance, isForecast: false },
-    ...days.map((d, i) => ({
+    ...days.map((d) => ({
       date: d.date,
       balance: d.projectedBalance,
       isForecast: true,
@@ -117,9 +114,6 @@ export function ForecastChart({
     x: mapX(i),
     label: shortDate(allPoints[i].date),
   }));
-
-  // Y-axis labels
-  const yTicks = [yMin + (yMax - yMin) * 0.1, (yMin + yMax) / 2, yMax - (yMax - yMin) * 0.1];
 
   const splitX = mapX(splitIndex);
 

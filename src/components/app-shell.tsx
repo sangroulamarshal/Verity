@@ -32,7 +32,7 @@ import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { CurrencySelector } from "@/components/currency-selector";
 import { UserMenu } from "@/components/user-menu";
-import { ROLE_LABELS, type UserRole } from "@/lib/permissions";
+import type { UserRole } from "@/lib/permissions";
 
 interface NavItem {
   href: string;
@@ -167,19 +167,13 @@ function NavLink({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group relative flex items-center gap-2.5 rounded-md py-1.5 pl-3 pr-2.5 text-[13px] transition-colors duration-150",
+        "group flex items-center gap-2.5 rounded-md py-1.5 pl-3 pr-2.5 text-[13px] transition-colors duration-150",
         active
-          ? "bg-accent/50 text-accent-foreground font-medium"
+          ? "bg-sidebar-active text-sidebar-active-foreground font-medium"
           : "text-muted-foreground hover:bg-elevated hover:text-foreground"
       )}
     >
-      <span
-        className={cn(
-          "absolute left-0 top-1/2 h-[14px] w-[3px] -translate-y-1/2 rounded-r-full bg-primary transition-opacity duration-150",
-          active ? "opacity-100" : "opacity-0"
-        )}
-        aria-hidden
-      />
+
       <Icon
         className={cn(
           "size-[14px] shrink-0 transition-colors duration-150",

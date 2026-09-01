@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ClipboardList, Search } from "lucide-react";
+import { ClipboardList } from "lucide-react";
 import { verifySession } from "@/server/services/session";
 import { listAuditLog, type AuditAction } from "@/server/services/audit-log";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TransactionTabs } from "@/features/transactions/transaction-tabs";
 import { AuditLogFilters } from "@/features/transactions/audit-log/audit-log-filters";
-import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Audit Log" };
 

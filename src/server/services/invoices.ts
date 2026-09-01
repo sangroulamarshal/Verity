@@ -1,8 +1,8 @@
 import "server-only";
 import { and, asc, desc, eq, gte, inArray, isNotNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { invoices, customers, transactions } from "@/db/schema";
-import { convertToTargetCurrency, FxRateUnavailableError } from "@/server/services/fx";
+import { invoices } from "@/db/schema";
+import { convertToTargetCurrency } from "@/server/services/fx";
 import type { ScheduledItem, ForecastConfidence } from "@/server/engines/forecast-engine";
 
 export type Invoice = typeof invoices.$inferSelect;

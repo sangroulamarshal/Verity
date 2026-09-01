@@ -98,9 +98,6 @@ async function getHistoricalPattern(
 
 // Minimum months of history for seasonality to be computed at all.
 const SEASONALITY_HISTORY_DAYS = 180; // ~6 months
-// Minimum distinct months observed to trust a ratio for a given calendar month.
-const MIN_SEASON_SAMPLES = 2;
-
 /**
  * Computes per-calendar-month income and expense ratios relative to the
  * organization's overall monthly average.

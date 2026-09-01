@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  ShieldAlert, ShieldCheck, ShieldX, Shield, MoreHorizontal, Search,
-} from "lucide-react";
+import { ShieldAlert, ShieldCheck, MoreHorizontal, Search } from "lucide-react";
 import { verifySession } from "@/server/services/session";
 import {
   getRiskSummary, getRecentAnomalies, listRiskTransactions,
@@ -11,7 +9,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RiskFilters } from "@/features/risk/risk-filters";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 

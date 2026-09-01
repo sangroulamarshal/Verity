@@ -14,7 +14,6 @@ export default async function ImportsPage() {
   const session = await verifySession();
   const history = await listImports(session.organizationId);
 
-  const totalRows = history.reduce((s, r) => s + r.rowCount, 0);
   const totalImported = history.reduce((s, r) => s + r.insertedRowCount, 0);
   const totalWarnings = history.reduce((s, r) => s + r.invalidRowCount, 0);
   const totalFailed = history.reduce((s, r) => s + (r.rowCount - r.insertedRowCount - r.duplicateRowCount - r.invalidRowCount), 0);

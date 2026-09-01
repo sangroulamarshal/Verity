@@ -20,7 +20,7 @@
  *   orange risk-high / warning
  *   amber  risk-medium
  *
- * Typography: IBM Plex Sans (body/UI) + IBM Plex Mono (amounts/IDs).
+ * Typography: Inter Variable (body/UI) + IBM Plex Mono (amounts/IDs).
  * Both self-hosted via @fontsource -- no external network calls.
  */
 
@@ -165,7 +165,9 @@
   --radius-lg: calc(var(--radius) + 2px);
   --radius-xl: calc(var(--radius) + 6px);
 
-  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  /* Inter variable -- matches the sidebar screenshot reference.
+     * Falls back to system-ui which is also geometric on macOS/iOS/Android. */
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
 }
 

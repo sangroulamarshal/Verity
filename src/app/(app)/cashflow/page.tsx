@@ -235,7 +235,6 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
               <ForecastChart
                 days={forecast.days}
                 openingBalance={openingDisplay}
-                currency={currency}
               />
             </CardContent>
           </Card>

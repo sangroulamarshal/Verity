@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   FileText, Clock, CheckCircle, AlertTriangle, FilePenLine,
-  ArrowRight, MoreHorizontal, Plus
+  MoreHorizontal, Plus
 } from "lucide-react";
-import { eq } from "drizzle-orm";
 import { verifySession } from "@/server/services/session";
 import { listInvoices, getInvoiceSummary } from "@/server/services/invoices";
 import { getOrganization } from "@/server/services/organizations";
@@ -50,9 +49,7 @@ export default async function InvoicesPage(props: { searchParams: Promise<Record
   ]);
 
   // Quick counts for the donut/bar section
-  const [paidRows, overdueRows, draftRows] = await Promise.all([
-    listInvoices(session.organizationId, { status: "PAID", pageSize: 1 }),
-    listInvoices(session.organizationId, { status: "OVERDUE", pageSize: 1 }),
+  const [draftRows] = await Promise.all([
     listInvoices(session.organizationId, { status: "DRAFT", pageSize: 1 }),
   ]);
 

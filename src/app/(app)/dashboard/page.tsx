@@ -9,7 +9,6 @@ import {
   TrendingUp,
   ShieldAlert,
   MoreHorizontal,
-  Eye,
 } from "lucide-react";
 import { db } from "@/db/client";
 import { organizations } from "@/db/schema";

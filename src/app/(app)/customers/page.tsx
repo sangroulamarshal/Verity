@@ -1,17 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Users, TrendingUp, ShieldAlert, ArrowUpRight, MoreHorizontal } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { verifySession } from "@/server/services/session";
 import { listCustomers } from "@/server/services/customers";
 import { canWriteCustomers } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { CustomerDialog } from "@/features/customers/customer-dialog";
 import { CustomerSearch } from "@/features/customers/customer-search";
-import { formatCurrency, formatDate } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Customers" };
 
