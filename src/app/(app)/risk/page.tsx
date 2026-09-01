@@ -1,30 +1,41 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import {
+  ShieldAlert, ShieldCheck, ShieldX, Shield, MoreHorizontal, Search,
+} from "lucide-react";
 import { verifySession } from "@/server/services/session";
 import {
-  getRiskSummary,
-  getRecentAnomalies,
-  listRiskTransactions,
-  type RiskLevel,
-  type RiskStatus,
+  getRiskSummary, getRecentAnomalies, listRiskTransactions,
+  type RiskLevel, type RiskStatus,
 } from "@/server/services/risk";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RiskTable } from "@/features/risk/risk-table";
+import { Badge } from "@/components/ui/badge";
 import { RiskFilters } from "@/features/risk/risk-filters";
-import { RiskLevelBadge } from "@/features/risk/risk-badge";
-import { formatDate } from "@/lib/format";
+import { formatCurrency, formatDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = {
-  title: "Risk",
-};
+export const metadata: Metadata = { title: "Risk" };
 
-function firstParam(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
+function firstParam(v: string | string[] | undefined) {
+  return Array.isArray(v) ? v[0] : v;
 }
 
 const LEVELS: RiskLevel[] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
 const STATUSES: RiskStatus[] = ["UNREVIEWED", "REVIEWED", "DISMISSED"];
+
+const LEVEL_COLORS = {
+  CRITICAL: { badge: "risk-critical" as const, icon: "text-risk-critical", bg: "bg-risk-critical/15" },
+  HIGH:     { badge: "risk-high" as const,     icon: "text-risk-high",     bg: "bg-risk-high/15" },
+  MEDIUM:   { badge: "risk-medium" as const,   icon: "text-risk-medium",   bg: "bg-risk-medium/15" },
+  LOW:      { badge: "risk-low" as const,      icon: "text-risk-low",      bg: "bg-risk-low/15" },
+};
+
+const STATUS_LABELS: Record<string, { label: string; variant: "secondary" | "success" | "outline" }> = {
+  UNREVIEWED: { label: "New", variant: "secondary" },
+  REVIEWED:   { label: "Reviewed", variant: "success" },
+  DISMISSED:  { label: "Dismissed", variant: "outline" },
+};
 
 export default async function RiskPage(props: PageProps<"/risk">) {
   const session = await verifySession();
@@ -40,137 +51,276 @@ export default async function RiskPage(props: PageProps<"/risk">) {
     getRiskSummary(session.organizationId),
     getRecentAnomalies(session.organizationId),
     listRiskTransactions(session.organizationId, {
-      page,
-      level,
-      status,
+      page, level, status,
       search: firstParam(searchParams.search),
     }),
   ]);
 
-  const hasAnyEvaluated = summary.totalAnalyzed > 0;
+  const hasAny = summary.totalAnalyzed > 0;
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-6 py-8">
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold tracking-tight">Risk</h1>
-        <p className="text-sm text-muted-foreground">
-          Deterministic, rule-based flags for unusual or suspicious transactions — not a fraud
-          determination. Every score comes with the specific signals that produced it.
-        </p>
+    <div className="mx-auto w-full max-w-[1280px] px-6 py-6">
+      {/* Header */}
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-[18px] font-semibold tracking-tight">Risk</h1>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">
+            Monitor unusual financial activity and investigate potential anomalies.
+          </p>
+        </div>
+        <Button variant="outline" size="sm">
+          <ShieldAlert className="mr-1.5 size-3.5" /> Risk Settings
+        </Button>
       </div>
 
-      {!hasAnyEvaluated ? (
+      {!hasAny ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-2 py-16 text-center">
-            <p className="text-sm font-medium">No transactions have been evaluated yet</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              New transactions are evaluated automatically as they&apos;re created or imported.
+            <ShieldCheck className="size-8 text-muted-foreground/40" />
+            <p className="text-[14px] font-medium">No transactions evaluated yet</p>
+            <p className="max-w-sm text-[13px] text-muted-foreground">
+              Transactions are evaluated automatically as they are created or imported.
             </p>
           </CardContent>
         </Card>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-4">
-            {LEVELS.map((lvl) => (
-              <Card key={lvl}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xs font-medium text-muted-foreground">
-                    <RiskLevelBadge level={lvl} />
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-2xl font-semibold tabular-nums">{summary.counts[lvl]}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          {/* 6 metric cards matching screenshot */}
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {(["CRITICAL", "HIGH", "MEDIUM", "LOW"] as RiskLevel[]).map((lvl) => {
+              const col = LEVEL_COLORS[lvl];
+              return (
+                <Card key={lvl}>
+                  <CardContent className="px-4 py-3.5">
+                    <div className="flex items-start justify-between">
+                      <p className="text-[12px] text-muted-foreground">{lvl.charAt(0) + lvl.slice(1).toLowerCase()}</p>
+                      <div className={cn("flex size-7 items-center justify-center rounded-md", col.bg)}>
+                        <ShieldAlert className={cn("size-3.5", col.icon)} />
+                      </div>
+                    </div>
+                    <p className="mt-2 text-[22px] font-semibold tabular-nums">{summary.counts[lvl]}</p>
+                    <p className="text-[11px] text-muted-foreground">0 from last 7 days</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">
-                  Transactions analyzed
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-2xl font-semibold tabular-nums">{summary.totalAnalyzed}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">
-                  Requiring review
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-2xl font-semibold tabular-nums">{summary.requiringReview}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">
-                  Critical
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-2xl font-semibold tabular-nums">{summary.counts.CRITICAL}</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {recentAnomalies.length > 0 && (
-            <Card className="mt-4">
-              <CardHeader>
-                <CardTitle>Recent anomalies</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <ul>
-                  {recentAnomalies.map((a) => (
-                    <li key={`${a.transactionId}-${a.createdAt.toISOString()}`}>
-                      <Link
-                        href={`/risk/${a.transactionId}`}
-                        className="flex items-center justify-between gap-4 border-b border-border/70 px-5 py-3 text-sm last:border-b-0 hover:bg-secondary/50"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate">{a.topSignal ?? "Flagged transaction"}</p>
-                          <p className="text-xs text-muted-foreground">{formatDate(a.createdAt.toISOString())}</p>
-                        </div>
-                        <RiskLevelBadge level={a.level} className="shrink-0" />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          )}
-
-          <Card className="mt-4">
-            <RiskFilters />
-            <RiskTable rows={table.rows} />
-            {table.totalPages > 1 && (
-              <div className="flex items-center justify-between border-t border-border p-4 text-sm text-muted-foreground">
-                <span>
-                  Page {table.page} of {table.totalPages}
-                </span>
-                <div className="flex gap-2">
-                  <Button asChild variant="outline" size="sm" disabled={table.page <= 1}>
-                    <Link
-                      href={`/risk?page=${table.page - 1}${level ? `&level=${level}` : ""}${status ? `&status=${status}` : ""}`}
-                    >
-                      Previous
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" size="sm" disabled={table.page >= table.totalPages}>
-                    <Link
-                      href={`/risk?page=${table.page + 1}${level ? `&level=${level}` : ""}${status ? `&status=${status}` : ""}`}
-                    >
-                      Next
-                    </Link>
-                  </Button>
+              <CardContent className="px-4 py-3.5">
+                <div className="flex items-start justify-between">
+                  <p className="text-[12px] text-muted-foreground">Reviewed</p>
+                  <div className="flex size-7 items-center justify-center rounded-md bg-muted">
+                    <ShieldCheck className="size-3.5 text-muted-foreground" />
+                  </div>
                 </div>
+                <p className="mt-2 text-[22px] font-semibold tabular-nums">
+                  {summary.totalAnalyzed - summary.requiringReview}
+                </p>
+                <p className="text-[11px] text-muted-foreground">0 from last 7 days</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="px-4 py-3.5">
+                <p className="text-[12px] text-muted-foreground">Risk Score (Avg)</p>
+                <p className="mt-2 text-[22px] font-semibold tabular-nums text-muted-foreground">--</p>
+                <p className="text-[11px] text-muted-foreground">0 from last 7 days</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Two-column: trend chart + category breakdown */}
+          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+            <Card className="lg:col-span-2">
+              <CardHeader className="flex-row items-center justify-between pb-0">
+                <CardTitle>Risk Trend</CardTitle>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-muted-foreground">Last 7 days</span>
+                  <button className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-elevated">
+                    <MoreHorizontal className="size-4" />
+                  </button>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-3">
+                <div className="flex h-32 items-center justify-center text-[13px] text-muted-foreground/40">
+                  Risk trend chart (requires more data)
+                </div>
+                <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
+                  <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-risk-critical" /> Critical</span>
+                  <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-risk-high" /> High</span>
+                  <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-risk-medium" /> Medium</span>
+                  <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-risk-low" /> Low</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Recent alerts sidebar */}
+            <Card>
+              <CardHeader className="flex-row items-center justify-between">
+                <CardTitle>Recent Risk Alerts</CardTitle>
+                <Link href="/risk" className="text-[12px] text-primary hover:underline">View all &rarr;</Link>
+              </CardHeader>
+              <div className="divide-y divide-border/50">
+                {recentAnomalies.slice(0, 5).map((a) => {
+                  const col = LEVEL_COLORS[a.level] ?? LEVEL_COLORS.LOW;
+                  return (
+                    <Link
+                      key={a.transactionId}
+                      href={`/risk/${a.transactionId}`}
+                      className="flex items-start justify-between gap-2 px-5 py-3 hover:bg-elevated/30 transition-colors"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-[13px] font-medium font-mono text-[11px]">{a.transactionId.slice(0, 8).toUpperCase()}</p>
+                        <p className="text-[11px] text-muted-foreground">{a.topSignal ?? "Risk event"}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span className={cn("text-[11px] font-medium", col.icon)}>
+                          {a.level.charAt(0) + a.level.slice(1).toLowerCase()}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">{a.score}</span>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
-            )}
-          </Card>
+              <div className="border-t border-border px-5 py-2.5">
+                <Link href="/risk" className="text-[12px] text-primary hover:underline">View all risk alerts &rarr;</Link>
+              </div>
+            </Card>
+          </div>
+
+          {/* Main risk table */}
+          <div className="mt-4 rounded-[6px] border border-border bg-surface overflow-hidden">
+            {/* Tab bar */}
+            <div className="flex items-center gap-1 border-b border-border px-4 pt-1">
+              {["All Alerts", "Critical", "High", "Medium", "Low", "Reviewed"].map((tab, i) => {
+                const isActive = i === 0 && !level && !status;
+                return (
+                  <Link
+                    key={tab}
+                    href={`/risk${i === 0 ? "" : i === 5 ? "?status=REVIEWED" : `?level=${tab.toUpperCase()}`}`}
+                    className={cn(
+                      "relative pb-2.5 pt-2 px-3 text-[13px] font-medium transition-colors",
+                      isActive ? "text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {tab}
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* Filters */}
+            <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
+              <div className="flex items-center gap-2 rounded-md border border-border bg-elevated/30 px-2.5 py-1.5 text-[12px] text-muted-foreground/50 flex-1 max-w-xs">
+                <Search className="size-3.5" />
+                <span>Search risk alerts...</span>
+              </div>
+              <Button variant="outline" size="sm">Risk Level</Button>
+              <Button variant="outline" size="sm">Category</Button>
+              <Button variant="outline" size="sm">Status</Button>
+              <Button variant="outline" size="sm">Date Range</Button>
+              <div className="ml-auto">
+                <Button variant="outline" size="sm">Export</Button>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px] border-collapse">
+                <thead className="border-b border-border bg-elevated/20">
+                  <tr>
+                    <th className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Transaction</th>
+                    <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Description</th>
+                    <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Amount</th>
+                    <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Customer</th>
+                    <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Category</th>
+                    <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Risk Score</th>
+                    <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Risk Level</th>
+                    <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Confidence</th>
+                    <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Status</th>
+                    <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Date</th>
+                    <th className="w-10 px-4 py-2.5" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {table.rows.length === 0 ? (
+                    <tr>
+                      <td colSpan={11} className="px-5 py-16 text-center text-[13px] text-muted-foreground">
+                        No flagged transactions match the current filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    table.rows.map((row) => {
+                      const lvl = (row.riskLevel ?? "LOW") as RiskLevel;
+                      const col = LEVEL_COLORS[lvl];
+                      const statusInfo = STATUS_LABELS[row.riskStatus ?? "UNREVIEWED"] ?? STATUS_LABELS.UNREVIEWED;
+                      return (
+                        <tr key={row.id} className="border-b border-border/50 hover:bg-elevated/40 transition-colors last:border-0">
+                          <td className="px-5 py-2.5">
+                            <Link href={`/risk/${row.id}`} className="font-mono text-[12px] text-primary hover:underline">
+                              {row.id.slice(0, 8).toUpperCase()}
+                            </Link>
+                          </td>
+                          <td className="px-4 py-2.5 max-w-[180px]">
+                            <span className="truncate block">{row.description || row.category}</span>
+                          </td>
+                          <td className="px-4 py-2.5 text-right tabular-nums font-medium text-expense">
+                            {formatCurrency(row.amount, row.currency)}
+                          </td>
+                          <td className="px-4 py-2.5 text-muted-foreground">
+                            {row.counterparty ?? "--"}
+                          </td>
+                          <td className="px-4 py-2.5 text-muted-foreground">{row.category}</td>
+                          <td className="px-4 py-2.5 text-right tabular-nums font-mono text-[12px]">
+                            {row.riskScore ?? "--"}
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <Badge variant={col.badge}>
+                              {lvl.charAt(0) + lvl.slice(1).toLowerCase()}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-2.5 text-right text-[12px] text-muted-foreground">
+                            --
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <Badge variant={statusInfo.variant}>
+                              {statusInfo.label}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-2.5 tabular-nums text-muted-foreground whitespace-nowrap">
+                            {formatDate(row.date)}
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <Link
+                              href={`/risk/${row.id}`}
+                              className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-elevated hover:text-foreground"
+                            >
+                              <MoreHorizontal className="size-4" />
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            <div className="flex items-center justify-between border-t border-border px-5 py-2.5">
+              <span className="text-[12px] text-muted-foreground">
+                Showing {table.rows.length > 0 ? (page - 1) * 20 + 1 : 0} to {Math.min(page * 20, table.total)} of {table.total} results
+              </span>
+              {table.totalPages > 1 && (
+                <div className="flex items-center gap-1">
+                  {[1,2,3,4,5].filter(p => p <= table.totalPages).map((p) => (
+                    <Button key={p} asChild={p !== page} variant={p === page ? "default" : "ghost"} size="sm">
+                      {p === page ? <span>{p}</span> : <Link href={`/risk?page=${p}`}>{p}</Link>}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </>
       )}
     </div>

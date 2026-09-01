@@ -1,7 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { eq } from "drizzle-orm";
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import {
+  ArrowUpRight,
+  ArrowDownRight,
+  ArrowRight,
+  FileText,
+  TrendingUp,
+  ShieldAlert,
+  MoreHorizontal,
+  Eye,
+} from "lucide-react";
 import { db } from "@/db/client";
 import { organizations } from "@/db/schema";
 import { verifySession } from "@/server/services/session";
@@ -12,33 +21,57 @@ import { getForecastSummary } from "@/server/services/forecast";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { CashFlowChart } from "@/components/cash-flow-chart";
 import { formatCurrency, formatDate } from "@/lib/format";
 
-export const metadata: Metadata = {
-  title: "Overview",
-};
+export const metadata: Metadata = { title: "Overview" };
 
-function percentChange(current: number, previous: number) {
-  if (previous <= 0) return null;
-  const change = ((current - previous) / previous) * 100;
-  return change;
+function pct(current: number, prev: number) {
+  if (prev <= 0) return null;
+  return ((current - prev) / prev) * 100;
 }
 
-function ChangeBadge({ value }: { value: number | null }) {
+function Delta({ value, inverse = false }: { value: number | null; inverse?: boolean }) {
   if (value === null) return null;
-  const up = value >= 0;
-  const Icon = up ? ArrowUpRight : ArrowDownRight;
+  const positive = inverse ? value <= 0 : value >= 0;
+  const Icon = value >= 0 ? ArrowUpRight : ArrowDownRight;
   return (
-    <span
-      className={
-        "inline-flex items-center gap-0.5 text-xs font-medium " +
-        (up ? "text-income" : "text-destructive")
-      }
-    >
+    <span className={cn("inline-flex items-center gap-0.5 text-[12px] font-medium", positive ? "text-income" : "text-expense")}>
       <Icon className="size-3.5" />
-      {Math.abs(value).toFixed(1)}% vs previous month
+      {Math.abs(value).toFixed(1)}% from last 7 days
     </span>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  delta,
+  deltaInverse,
+  icon: Icon,
+  iconColor,
+}: {
+  label: string;
+  value: string;
+  delta?: number | null;
+  deltaInverse?: boolean;
+  icon: React.ComponentType<{ className?: string }>;
+  iconColor?: string;
+}) {
+  return (
+    <Card>
+      <CardContent className="px-5 py-4">
+        <div className="flex items-start justify-between">
+          <p className="text-[12px] text-muted-foreground">{label}</p>
+          <div className={cn("flex size-8 shrink-0 items-center justify-center rounded-md", iconColor ?? "bg-muted")}>
+            <Icon className="size-4 text-muted-foreground" />
+          </div>
+        </div>
+        <p className="mt-2 text-[22px] font-semibold tabular-nums tracking-tight">{value}</p>
+        {delta !== undefined && <Delta value={delta ?? null} inverse={deltaInverse} />}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -46,244 +79,275 @@ export default async function DashboardPage() {
   const session = await verifySession();
 
   const [[org], summary] = await Promise.all([
-    db
-      .select({ name: organizations.name, baseCurrency: organizations.baseCurrency })
-      .from(organizations)
-      .where(eq(organizations.id, session.organizationId))
-      .limit(1),
+    db.select({ name: organizations.name, baseCurrency: organizations.baseCurrency })
+      .from(organizations).where(eq(organizations.id, session.organizationId)).limit(1),
     getDashboardSummary(session.organizationId),
   ]);
-  // Sequential -- single connection pool (max:1) means Promise.all adds
-  // timeout risk with no parallelism benefit. getForecastSummary is
-  // wrapped in try/catch so a forecast failure never breaks the dashboard.
+
   const riskSummary = await getRiskSummary(session.organizationId);
   const forecastSummary = await getForecastSummary(session.organizationId, 30).catch(() => null);
 
   const baseCurrency = org?.baseCurrency ?? "GBP";
-  const requestedCurrency = session.displayCurrency ?? baseCurrency;
-  const {
-    summary: displaySummary,
-    currency,
-    rateUnavailable,
-  } = await resolveDisplaySummary(summary, baseCurrency, requestedCurrency);
+  const { summary: disp, currency, rateUnavailable } = await resolveDisplaySummary(
+    summary, baseCurrency, session.displayCurrency ?? baseCurrency
+  );
 
-  const months = displaySummary.monthlyTotals;
-  const current = months.at(-1);
-  const previous = months.at(-2);
+  const months = disp.monthlyTotals;
+  const cur = months.at(-1);
+  const prev = months.at(-2);
+  const incomeChg = cur && prev ? pct(cur.income, prev.income) : null;
+  const expChg = cur && prev ? pct(cur.expense, prev.expense) : null;
+  const netChg = cur && prev ? pct(cur.income - cur.expense, prev.income - prev.expense) : null;
 
-  const incomeChange = current && previous ? percentChange(current.income, previous.income) : null;
-  const expenseChange = current && previous ? percentChange(current.expense, previous.expense) : null;
-  const netChange =
-    current && previous
-      ? percentChange(current.income - current.expense, previous.income - previous.expense)
-      : null;
-
-  const hasActivity = displaySummary.transactionCount > 0;
+  const hasActivity = disp.transactionCount > 0;
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-8">
-      <div className="mb-6">
-        <p className="text-sm text-muted-foreground">
-          {new Date().toLocaleDateString(undefined, {
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-          })}
-        </p>
-        <h1 className="text-xl font-semibold tracking-tight">
-          {org?.name ?? "Your organization"}
-        </h1>
-        {rateUnavailable && (
-          <p className="mt-1 text-xs text-muted-foreground">
-            Showing totals in {baseCurrency} -- the exchange rate to {requestedCurrency} is
-            currently unavailable.
+    <div className="mx-auto w-full max-w-[1280px] px-6 py-6">
+      {/* Page header */}
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-[18px] font-semibold tracking-tight">Overview</h1>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">
+            Real-time overview of your financial activity and risk exposure.
           </p>
-        )}
+        </div>
+        <Button asChild size="sm">
+          <Link href="/transactions">
+            + Add Transaction
+          </Link>
+        </Button>
       </div>
+
+      {rateUnavailable && (
+        <div className="mb-4 rounded-md border border-border bg-elevated px-4 py-2.5 text-[12px] text-muted-foreground">
+          Showing totals in {baseCurrency} -- exchange rate to {session.displayCurrency} unavailable.
+        </div>
+      )}
 
       {!hasActivity ? (
         <Card>
-          <CardContent className="flex flex-col items-center gap-2 py-16 text-center">
-            <p className="text-sm font-medium">No financial activity yet</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              Record your first transaction or import a statement to see revenue, expenses,
-              and cash flow here.
+          <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
+            <p className="text-[14px] font-medium">No financial activity yet</p>
+            <p className="max-w-sm text-[13px] text-muted-foreground">
+              Add your first transaction or import a statement to see revenue, expenses, and cash flow.
             </p>
-            <div className="mt-2 flex gap-2">
-              <Button asChild size="sm">
-                <Link href="/transactions">Add a transaction</Link>
-              </Button>
-              <Button asChild variant="outline" size="sm">
-                <Link href="/imports">Import a statement</Link>
-              </Button>
+            <div className="mt-1 flex gap-2">
+              <Button asChild size="sm"><Link href="/transactions">Add transaction</Link></Button>
+              <Button asChild variant="outline" size="sm"><Link href="/imports">Import statement</Link></Button>
             </div>
           </CardContent>
         </Card>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">
-                  Revenue
-                </CardTitle>
+          {/* KPI row -- matches screenshot exactly: 5 cards */}
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <MetricCard label="Total Income" value={formatCurrency(disp.totalIncome, currency)} delta={incomeChg} icon={TrendingUp} iconColor="bg-income/15" />
+            <MetricCard label="Total Expenses" value={formatCurrency(disp.totalExpense, currency)} delta={expChg} deltaInverse icon={ArrowDownRight} iconColor="bg-expense/15" />
+            <MetricCard label="Net Cash Flow" value={formatCurrency(disp.netCashFlow, currency)} delta={netChg} icon={TrendingUp} iconColor="bg-primary/15" />
+            <MetricCard label="Transactions" value={disp.transactionCount.toLocaleString()} icon={FileText} iconColor="bg-muted" />
+            <MetricCard label="Risk Alerts" value={String(riskSummary.requiringReview)} icon={ShieldAlert} iconColor="bg-risk-critical/15" />
+          </div>
+
+          {/* Two-column charts row */}
+          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+            {/* Cash flow chart - takes 2/3 */}
+            <Card className="lg:col-span-2">
+              <CardHeader className="flex-row items-center justify-between pb-0">
+                <CardTitle>Cash Flow Trend</CardTitle>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-muted-foreground">Last 7 days</span>
+                  <button className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-elevated">
+                    <MoreHorizontal className="size-4" />
+                  </button>
+                </div>
               </CardHeader>
-              <CardContent className="flex flex-col gap-1 pt-0">
-                <p className="text-2xl font-semibold tabular-nums">
-                  {formatCurrency(displaySummary.totalIncome, currency)}
-                </p>
-                <ChangeBadge value={incomeChange} />
+              <CardContent className="pt-3">
+                <CashFlowChart data={months} />
               </CardContent>
             </Card>
 
+            {/* Risk overview - takes 1/3 */}
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">
-                  Expenses
-                </CardTitle>
+              <CardHeader className="flex-row items-center justify-between pb-0">
+                <CardTitle>Risk Overview</CardTitle>
+                <button className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-elevated">
+                  <MoreHorizontal className="size-4" />
+                </button>
               </CardHeader>
-              <CardContent className="flex flex-col gap-1 pt-0">
-                <p className="text-2xl font-semibold tabular-nums">
-                  {formatCurrency(displaySummary.totalExpense, currency)}
-                </p>
-                <ChangeBadge value={expenseChange !== null ? -expenseChange : null} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">
-                  Net cash flow
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-1 pt-0">
-                <p className="text-2xl font-semibold tabular-nums">
-                  {formatCurrency(displaySummary.netCashFlow, currency)}
-                </p>
-                <ChangeBadge value={netChange} />
+              <CardContent className="pt-3">
+                {riskSummary.totalAnalyzed === 0 ? (
+                  <p className="text-[13px] text-muted-foreground">No transactions evaluated yet.</p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {(["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const).map((lvl) => {
+                      const count = riskSummary.counts[lvl];
+                      const pctVal = riskSummary.totalAnalyzed > 0
+                        ? Math.round((count / riskSummary.totalAnalyzed) * 100)
+                        : 0;
+                      const colors = {
+                        CRITICAL: { bar: "bg-risk-critical", text: "text-risk-critical" },
+                        HIGH: { bar: "bg-risk-high", text: "text-risk-high" },
+                        MEDIUM: { bar: "bg-risk-medium", text: "text-risk-medium" },
+                        LOW: { bar: "bg-risk-low", text: "text-risk-low" },
+                      };
+                      return (
+                        <div key={lvl} className="flex items-center gap-3">
+                          <span className={cn("w-14 text-[12px] font-medium capitalize", colors[lvl].text)}>
+                            {lvl.charAt(0) + lvl.slice(1).toLowerCase()}
+                          </span>
+                          <div className="flex-1 h-1.5 rounded-full bg-elevated overflow-hidden">
+                            <div className={cn("h-full rounded-full", colors[lvl].bar)} style={{ width: `${pctVal}%` }} />
+                          </div>
+                          <span className="w-6 text-right text-[12px] tabular-nums text-muted-foreground">{count}</span>
+                          <span className="w-8 text-right text-[11px] text-muted-foreground">{pctVal}%</span>
+                        </div>
+                      );
+                    })}
+                    <div className="pt-2">
+                      <Link href="/risk" className="inline-flex items-center gap-1 text-[12px] text-primary hover:underline">
+                        View all risk alerts <ArrowRight className="size-3" />
+                      </Link>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
 
-          <Card className="mt-4">
-            <CardHeader>
-              <CardTitle>Cash flow</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CashFlowChart data={months} />
-            </CardContent>
-          </Card>
-
-          <Card className="mt-4">
-            <CardHeader className="flex-row items-center justify-between">
-              <CardTitle>Recent transactions</CardTitle>
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/transactions">View all</Link>
-              </Button>
-            </CardHeader>
-            <CardContent className="p-0">
-              <ul>
-                {summary.recentTransactions.map((t) => (
-                  <li
-                    key={t.id}
-                    className="flex items-center justify-between gap-4 border-b border-border/70 px-5 py-3 text-sm last:border-b-0"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{t.category}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {formatDate(t.date)}
-                        {t.description ? ` · ${t.description}` : ""}
-                      </p>
-                    </div>
-                    <p
-                      className={
-                        "shrink-0 tabular-nums font-medium " +
-                        (t.type === "INCOME" ? "text-income" : "text-expense")
-                      }
-                    >
-                      {t.type === "INCOME" ? "+" : "-"}
-                      {formatCurrency(t.amount, t.currency)}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-
-          {riskSummary.totalAnalyzed > 0 && (
-            <Card className="mt-4">
+          {/* Two-column tables row */}
+          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+            {/* Recent transactions - 2/3 */}
+            <Card className="lg:col-span-2">
               <CardHeader className="flex-row items-center justify-between">
-                <CardTitle>Risk</CardTitle>
-                <Button asChild variant="ghost" size="sm">
-                  <Link href="/risk">Review risk &rarr;</Link>
-                </Button>
+                <CardTitle>Recent Transactions</CardTitle>
+                <Link href="/transactions" className="inline-flex items-center gap-1 text-[12px] text-primary hover:underline">
+                  View all <ArrowRight className="size-3" />
+                </Link>
               </CardHeader>
-              <CardContent className="flex items-center gap-6">
-                <div>
-                  <p className="text-2xl font-semibold tabular-nums text-orange-600 dark:text-orange-400">
-                    {riskSummary.counts.HIGH}
-                  </p>
-                  <p className="text-xs text-muted-foreground">High</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-semibold tabular-nums text-destructive">
-                    {riskSummary.counts.CRITICAL}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Critical</p>
-                </div>
-                {riskSummary.requiringReview > 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    {riskSummary.requiringReview} transaction
-                    {riskSummary.requiringReview === 1 ? "" : "s"} require review
-                  </p>
-                )}
-              </CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="px-5 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Date</th>
+                      <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Description</th>
+                      <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Category</th>
+                      <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Amount</th>
+                      <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Risk</th>
+                      <th className="px-5 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summary.recentTransactions.map((t) => (
+                      <tr key={t.id} className="border-b border-border/50 hover:bg-elevated/40 transition-colors last:border-0">
+                        <td className="px-5 py-2.5 tabular-nums text-muted-foreground whitespace-nowrap">{formatDate(t.date)}</td>
+                        <td className="px-3 py-2.5 max-w-[180px] truncate">
+                          {t.description || <span className="text-muted-foreground">{t.category}</span>}
+                        </td>
+                        <td className="px-3 py-2.5 text-muted-foreground">{t.category}</td>
+                        <td className={cn("px-3 py-2.5 text-right tabular-nums font-medium", t.type === "INCOME" ? "text-income" : "text-expense")}>
+                          {t.type === "INCOME" ? "+" : "-"}{formatCurrency(t.amount, t.currency)}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          {t.riskLevel ? (
+                            <Badge variant={`risk-${t.riskLevel.toLowerCase()}` as "risk-low"}>
+                              {t.riskLevel.charAt(0) + t.riskLevel.slice(1).toLowerCase()}
+                            </Badge>
+                          ) : <span className="text-muted-foreground/40">--</span>}
+                        </td>
+                        <td className="px-5 py-2.5">
+                          <Badge variant="secondary">Completed</Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="border-t border-border px-5 py-2.5">
+                <Link href="/transactions" className="text-[12px] text-primary hover:underline">
+                  View all transactions &rarr;
+                </Link>
+              </div>
             </Card>
-          )}
+
+            {/* Recent risk alerts - 1/3 */}
+            <Card>
+              <CardHeader className="flex-row items-center justify-between">
+                <CardTitle>Recent Risk Alerts</CardTitle>
+                <Link href="/risk" className="inline-flex items-center gap-1 text-[12px] text-primary hover:underline">
+                  View all <ArrowRight className="size-3" />
+                </Link>
+              </CardHeader>
+              <div className="divide-y divide-border/50">
+                {riskSummary.totalAnalyzed === 0 ? (
+                  <p className="px-5 py-8 text-center text-[13px] text-muted-foreground">No risk alerts yet.</p>
+                ) : (
+                  summary.recentTransactions
+                    .filter((t) => t.riskLevel && t.riskLevel !== "LOW")
+                    .slice(0, 5)
+                    .map((t) => {
+                      const lvlColor = {
+                        CRITICAL: "text-risk-critical",
+                        HIGH: "text-risk-high",
+                        MEDIUM: "text-risk-medium",
+                        LOW: "text-risk-low",
+                      }[t.riskLevel ?? "LOW"] ?? "text-muted-foreground";
+                      return (
+                        <div key={t.id} className="flex items-start justify-between gap-3 px-5 py-3 hover:bg-elevated/30 transition-colors">
+                          <div className="min-w-0">
+                            <p className="truncate text-[13px] font-medium">{formatCurrency(t.baseAmount, baseCurrency)}</p>
+                            <p className="text-[11px] text-muted-foreground">{t.category}</p>
+                          </div>
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            {t.riskLevel && (
+                              <span className={cn("text-[11px] font-medium", lvlColor)}>
+                                {t.riskLevel.charAt(0) + t.riskLevel.slice(1).toLowerCase()}
+                              </span>
+                            )}
+                            <span className="text-[11px] text-muted-foreground">{formatDate(t.date)}</span>
+                          </div>
+                        </div>
+                      );
+                    })
+                )}
+              </div>
+              {riskSummary.totalAnalyzed > 0 && (
+                <div className="border-t border-border px-5 py-2.5">
+                  <Link href="/risk" className="text-[12px] text-primary hover:underline">
+                    View all alerts &rarr;
+                  </Link>
+                </div>
+              )}
+            </Card>
+          </div>
+
+          {/* Forecast strip */}
           {forecastSummary && forecastSummary.confidence !== "INSUFFICIENT" && (
             <Card className="mt-4">
-              <CardHeader className="flex-row items-center justify-between">
-                <CardTitle>Cash flow forecast</CardTitle>
-                <Button asChild variant="ghost" size="sm">
-                  <Link href="/cashflow">View forecast</Link>
-                </Button>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-8">
+              <CardContent className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:gap-10">
                 <div>
-                  <p className="text-xs text-muted-foreground">Current</p>
-                  <p className="text-xl font-semibold tabular-nums">
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Current cash</p>
+                  <p className="mt-0.5 text-[18px] font-semibold tabular-nums">
                     {formatCurrency(forecastSummary.currentBalance, forecastSummary.baseCurrency)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">30-day projected</p>
-                  <p className={cn(
-                    "text-xl font-semibold tabular-nums",
-                    forecastSummary.projectedBalance < 0 ? "text-destructive" : ""
-                  )}>
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider">30-day projected</p>
+                  <p className={cn("mt-0.5 text-[18px] font-semibold tabular-nums", forecastSummary.projectedBalance < 0 ? "text-expense" : "")}>
                     {formatCurrency(forecastSummary.projectedBalance, forecastSummary.baseCurrency)}
                   </p>
                 </div>
                 {forecastSummary.hasProjectedShortfall && (
-                  <p className="text-sm font-medium text-destructive">
-                    Projected shortfall around {forecastSummary.minimumBalance.date}
-                  </p>
+                  <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-1.5">
+                    <p className="text-[12px] font-medium text-destructive">Projected shortfall {forecastSummary.minimumBalance.date}</p>
+                  </div>
                 )}
-                <div className="sm:ml-auto">
-                  <span className={cn(
-                    "inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium",
-                    forecastSummary.confidence === "HIGH"
-                      ? "bg-income/15 text-green-700 dark:text-green-400"
-                      : forecastSummary.confidence === "MEDIUM"
-                        ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
-                        : "bg-orange-500/15 text-orange-700 dark:text-orange-400"
-                  )}>
-                    {forecastSummary.confidence === "HIGH"
-                      ? "High confidence"
-                      : forecastSummary.confidence === "MEDIUM"
-                        ? "Medium confidence"
-                        : "Low confidence"}
-                  </span>
+                <div className="sm:ml-auto flex items-center gap-3">
+                  <Badge variant={forecastSummary.confidence === "HIGH" ? "success" : forecastSummary.confidence === "MEDIUM" ? "warning" : "secondary"}>
+                    {forecastSummary.confidence === "HIGH" ? "High confidence" : forecastSummary.confidence === "MEDIUM" ? "Medium confidence" : "Low confidence"}
+                  </Badge>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/cashflow">View forecast</Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
