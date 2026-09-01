@@ -9,7 +9,7 @@ import {
   type ScheduledItem,
 } from "./forecast-engine";
 
-// ── Shared fixtures ──────────────────────────────────────────────────────────
+// -- Shared fixtures ----------------------------------------------------------
 
 const TODAY = "2026-09-01";
 
@@ -53,7 +53,7 @@ const baseInput: ForecastInput = {
   outstandingInvoiceCount: 0,
 };
 
-// ── addDays ──────────────────────────────────────────────────────────────────
+// -- addDays ------------------------------------------------------------------
 
 describe("addDays", () => {
   it("adds days correctly within a month", () => {
@@ -69,7 +69,7 @@ describe("addDays", () => {
   });
 });
 
-// ── computeOverallConfidence ─────────────────────────────────────────────────
+// -- computeOverallConfidence -------------------------------------------------
 
 describe("computeOverallConfidence", () => {
   it("returns INSUFFICIENT when no data at all", () => {
@@ -127,9 +127,9 @@ describe("computeOverallConfidence", () => {
   });
 });
 
-// ── generateForecast — NORMAL BUSINESS ───────────────────────────────────────
+// -- generateForecast -- NORMAL BUSINESS ---------------------------------------
 
-describe("generateForecast — normal business", () => {
+describe("generateForecast -- normal business", () => {
   it("A: produces reasonable 30-day projection with stable history", () => {
     const result = generateForecast(baseInput);
     expect(result.horizon).toBe(30);
@@ -174,9 +174,9 @@ describe("generateForecast — normal business", () => {
   });
 });
 
-// ── generateForecast — SPARSE DATA ───────────────────────────────────────────
+// -- generateForecast -- SPARSE DATA -------------------------------------------
 
-describe("generateForecast — sparse data", () => {
+describe("generateForecast -- sparse data", () => {
   it("F: sparse history → LOW confidence, no crash", () => {
     const result = generateForecast({
       ...baseInput,
@@ -201,15 +201,15 @@ describe("generateForecast — sparse data", () => {
   });
 });
 
-// ── generateForecast — RECURRING EXPENSE ─────────────────────────────────────
+// -- generateForecast -- RECURRING EXPENSE -------------------------------------
 
-describe("generateForecast — recurring preset", () => {
+describe("generateForecast -- recurring preset", () => {
   it("H: monthly preset appears at most once per calendar month covered", () => {
-    // startDate = addDays("2026-09-01", 1) = "2026-09-02", 30 days = Sep 2 – Oct 1.
+    // startDate = addDays("2026-09-01", 1) = "2026-09-02", 30 days = Sep 2 - Oct 1.
     // September: preset on day 28 → "2026-09-28" ✓ (in window)
     // October: day 28 = "2026-10-28" which is outside the window; first in-window
     // October date is "2026-10-01", so it fires there too.
-    // The engine must fire once per month covered — exactly 2 here.
+    // The engine must fire once per month covered -- exactly 2 here.
     const result = generateForecast({
       ...baseInput,
       recurringTemplates: [monthlyPreset],
@@ -217,7 +217,7 @@ describe("generateForecast — recurring preset", () => {
     const presetItems = result.items.filter(
       (i) => i.source === "PRESET" && i.label === "Payroll"
     );
-    // Covers Sep and Oct partially — expect exactly 2 occurrences
+    // Covers Sep and Oct partially -- expect exactly 2 occurrences
     expect(presetItems.length).toBeGreaterThanOrEqual(1);
     expect(presetItems.every((i) => i.amount === 20_000)).toBe(true);
     expect(presetItems.every((i) => i.type === "EXPENSE")).toBe(true);
@@ -245,14 +245,14 @@ describe("generateForecast — recurring preset", () => {
   });
 });
 
-// ── generateForecast — OUTSTANDING INVOICE ────────────────────────────────────
+// -- generateForecast -- OUTSTANDING INVOICE ------------------------------------
 
-describe("generateForecast — scheduled invoice", () => {
+describe("generateForecast -- scheduled invoice", () => {
   const invoice: ScheduledItem = {
     date: addDays(TODAY, 5),
     amount: 50_000,
     type: "INCOME",
-    label: "ABC Traders — Invoice #123",
+    label: "ABC Traders -- Invoice #123",
     source: "INVOICE",
     confidence: "MEDIUM",
   };
@@ -289,11 +289,11 @@ describe("generateForecast — scheduled invoice", () => {
   });
 });
 
-// ── generateForecast — PAID/CANCELLED INVOICE ─────────────────────────────────
+// -- generateForecast -- PAID/CANCELLED INVOICE ---------------------------------
 
-describe("generateForecast — paid invoice excluded", () => {
+describe("generateForecast -- paid invoice excluded", () => {
   it("N: paid invoices must not appear (service layer responsibility documented)", () => {
-    // The engine accepts scheduledItems as-is — the service layer (forecast.ts)
+    // The engine accepts scheduledItems as-is -- the service layer (forecast.ts)
     // is responsible for filtering out PAID and CANCELLED invoices before
     // passing them to the engine. This test documents that contract:
     // a scheduled item that slips in from a paid invoice would be counted.
@@ -303,9 +303,9 @@ describe("generateForecast — paid invoice excluded", () => {
   });
 });
 
-// ── generateForecast — NEGATIVE CASH FLOW ─────────────────────────────────────
+// -- generateForecast -- NEGATIVE CASH FLOW -------------------------------------
 
-describe("generateForecast — negative projected balance", () => {
+describe("generateForecast -- negative projected balance", () => {
   it("O: detects projected shortfall when expenses > income + opening", () => {
     const result = generateForecast({
       ...baseInput,
@@ -342,9 +342,9 @@ describe("generateForecast — negative projected balance", () => {
   });
 });
 
-// ── generateForecast — MULTI-CURRENCY SAFETY ──────────────────────────────────
+// -- generateForecast -- MULTI-CURRENCY SAFETY ----------------------------------
 
-describe("generateForecast — currency boundary", () => {
+describe("generateForecast -- currency boundary", () => {
   it("Q: baseCurrency is passed through unchanged, no conversion attempted", () => {
     const result = generateForecast({
       ...baseInput,
@@ -357,9 +357,9 @@ describe("generateForecast — currency boundary", () => {
   });
 });
 
-// ── generateForecast — EXTREME OUTLIER ────────────────────────────────────────
+// -- generateForecast -- EXTREME OUTLIER ----------------------------------------
 
-describe("generateForecast — large one-off historical outlier", () => {
+describe("generateForecast -- large one-off historical outlier", () => {
   it("R: highly variable history produces LOW confidence warning", () => {
     const result = generateForecast({
       ...baseInput,
@@ -377,9 +377,9 @@ describe("generateForecast — large one-off historical outlier", () => {
   });
 });
 
-// ── generateForecast — ZERO PROJECTED BALANCE ────────────────────────────────
+// -- generateForecast -- ZERO PROJECTED BALANCE --------------------------------
 
-describe("generateForecast — exact zero balance", () => {
+describe("generateForecast -- exact zero balance", () => {
   it("S: income == expenses → projected balance equals opening balance", () => {
     const result = generateForecast({
       ...baseInput,
@@ -396,18 +396,18 @@ describe("generateForecast — exact zero balance", () => {
   });
 });
 
-// ── generateForecast — 90-day horizon ────────────────────────────────────────
+// -- generateForecast -- 90-day horizon ----------------------------------------
 
-describe("generateForecast — 90-day horizon", () => {
+describe("generateForecast -- 90-day horizon", () => {
   it("T: 90-day horizon produces exactly 90 days", () => {
     const result = generateForecast({ ...baseInput, horizon: 90 });
     expect(result.days).toHaveLength(90);
   });
 });
 
-// ── generateForecast — sources aggregation ───────────────────────────────────
+// -- generateForecast -- sources aggregation -----------------------------------
 
-describe("generateForecast — sources", () => {
+describe("generateForecast -- sources", () => {
   it("U: sources sum to totalExpectedIncome and totalExpectedExpenses", () => {
     const invoice: ScheduledItem = {
       date: addDays(TODAY, 3),
@@ -434,9 +434,9 @@ describe("generateForecast — sources", () => {
   });
 });
 
-// ── Phase 7C: Scenarios ───────────────────────────────────────────────────────
+// -- Phase 7C: Scenarios -------------------------------------------------------
 
-describe("generateForecast — scenarios", () => {
+describe("generateForecast -- scenarios", () => {
   it("V: always returns exactly 3 scenarios", () => {
     const result = generateForecast(baseInput);
     expect(result.scenarios).toHaveLength(3);
@@ -486,9 +486,9 @@ describe("generateForecast — scenarios", () => {
   });
 });
 
-// ── Phase 7C: Insights ────────────────────────────────────────────────────────
+// -- Phase 7C: Insights --------------------------------------------------------
 
-describe("generateForecast — insights", () => {
+describe("generateForecast -- insights", () => {
   it("AA: shortfall → CRITICAL insight", () => {
     const result = generateForecast({
       ...baseInput,
@@ -541,11 +541,11 @@ describe("generateForecast — insights", () => {
   });
 });
 
-// ── Phase 7C: Seasonality ────────────────────────────────────────────────────
+// -- Phase 7C: Seasonality ----------------------------------------------------
 
 import { type MonthlySeasonality } from "./forecast-engine";
 
-describe("generateForecast — seasonality", () => {
+describe("generateForecast -- seasonality", () => {
   it("AE: seasonalityApplied is false when seasonality is null", () => {
     const result = generateForecast({ ...baseInput, seasonality: null });
     expect(result.seasonalityApplied).toBe(false);

@@ -1,4 +1,4 @@
-// Phase 7 — Cash-Flow Forecasting Engine: pure projection logic.
+// Phase 7 -- Cash-Flow Forecasting Engine: pure projection logic.
 //
 // Deliberately has zero database/framework dependencies, mirroring the
 // risk-engine.ts / risk.ts split (Phase 6): this file is the
@@ -8,7 +8,7 @@
 //
 // === Methodology ===
 //
-// The forecast is a DETERMINISTIC RULE-BASED model — no ML, no LLMs,
+// The forecast is a DETERMINISTIC RULE-BASED model -- no ML, no LLMs,
 // no black boxes. Every projected number has a concrete data-backed
 // reason.
 //
@@ -20,9 +20,9 @@
 //   = projected closing balance
 //
 // Data sources in priority order:
-//   1. Transaction presets (named recurring templates) — highest confidence
-//   2. Historical daily averages by type (income/expense) — medium confidence
-//   3. Nothing — when data is insufficient
+//   1. Transaction presets (named recurring templates) -- highest confidence
+//   2. Historical daily averages by type (income/expense) -- medium confidence
+//   3. Nothing -- when data is insufficient
 //
 // Presets represent explicit, named recurring commitments: "Payroll",
 // "Rent", etc. They are projected once per forecast period, spread
@@ -35,16 +35,16 @@
 // avoid double-counting.
 //
 // Confidence reflects the quality of the underlying data:
-//   HIGH    — 3+ months of history + preset-backed amounts
-//   MEDIUM  — enough history to pattern-match but limited presets
-//   LOW     — sparse data, no reliable patterns
+//   HIGH    -- 3+ months of history + preset-backed amounts
+//   MEDIUM  -- enough history to pattern-match but limited presets
+//   LOW     -- sparse data, no reliable patterns
 //
 // === Multi-currency ===
 //
 // All amounts fed into this engine are already expressed in the
 // organization's base currency (baseAmount on each transaction,
 // preset.baseAmount from the service layer). No currency conversion
-// happens here — that responsibility lies entirely in the DB layer
+// happens here -- that responsibility lies entirely in the DB layer
 // (forecast.ts) which reuses the exact same FX infrastructure as
 // transactions and the risk engine.
 //
@@ -53,7 +53,7 @@
 // Invoice-based expected payments (Phase 7B) are a separate, named
 // data source that the DB layer computes and passes in as
 // `scheduledItems`. This engine treats them as first-class explicit
-// items with known dates and amounts — higher confidence than historical
+// items with known dates and amounts -- higher confidence than historical
 // patterns because the amount and due date are recorded facts, not
 // estimates.
 
@@ -104,17 +104,17 @@ export interface RecurringTemplate {
   category: string;
   /** Amount in org base currency. */
   monthlyAmount: number;
-  /** Which day of the month this is typically due (1–31). 0 = unknown/spread. */
+  /** Which day of the month this is typically due (1-31). 0 = unknown/spread. */
   typicalDayOfMonth: number;
 }
 
 /**
- * A scheduled item with a known amount and date — e.g. an outstanding
+ * A scheduled item with a known amount and date -- e.g. an outstanding
  * invoice expected to be paid on a specific date (Phase 7B).
  * The service layer constructs these; the engine treats them as facts.
  */
 export interface ScheduledItem {
-  date: string; // YYYY-MM-DD — expected payment/occurrence date
+  date: string; // YYYY-MM-DD -- expected payment/occurrence date
   amount: number; // In org base currency
   type: "INCOME" | "EXPENSE";
   label: string;
@@ -264,9 +264,9 @@ export interface ForecastResult {
   seasonalityApplied: boolean;
 }
 
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 // Constants
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 
 /** Minimum transactions before historical patterns are considered reliable. */
 const MIN_TRANSACTIONS_FOR_PATTERN = 10;
@@ -277,9 +277,9 @@ const HIGH_VARIABILITY_THRESHOLD = 1.5;
 /** Fraction of daily average allocated on any given day from patterns. */
 const DAILY_PATTERN_SCALE = 1.0; // already a daily figure from the service layer
 
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 // Date utilities (pure, no external deps)
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 
 export function addDays(isoDate: string, n: number): string {
   const d = new Date(`${isoDate}T00:00:00Z`);
@@ -293,7 +293,7 @@ function daysBetween(from: string, to: string): number {
   return Math.round((b.getTime() - a.getTime()) / 86_400_000);
 }
 
-/** Return the day-of-month (1–31) for a YYYY-MM-DD string. */
+/** Return the day-of-month (1-31) for a YYYY-MM-DD string. */
 function dayOfMonth(isoDate: string): number {
   return Number(isoDate.slice(8, 10));
 }
@@ -303,9 +303,9 @@ function dateRange(start: string, days: number): string[] {
   return Array.from({ length: days }, (_, i) => addDays(start, i));
 }
 
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 // Confidence calculation
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 
 export function computeOverallConfidence(
   input: ForecastInput,
@@ -377,9 +377,9 @@ export function computeOverallConfidence(
   };
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Preset expansion — projects recurring templates into the forecast window
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
+// Preset expansion -- projects recurring templates into the forecast window
+// ----------------------------------------------------------------------------
 
 /**
  * Determines which dates within the forecast window a monthly preset
@@ -411,7 +411,7 @@ function expandPreset(
       seenMonths.add(ym);
     } else if (dates.some((d) => d.startsWith(ym))) {
       // The specific day falls outside the window start/end but the month is
-      // partially covered — use first day of that month within the window
+      // partially covered -- use first day of that month within the window
       const firstInWindow = dates.find((d) => d.startsWith(ym));
       if (firstInWindow) {
         result.push({ date: firstInWindow, amount: template.monthlyAmount });
@@ -423,9 +423,9 @@ function expandPreset(
   return result;
 }
 
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 // Main projection function
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 
 export function generateForecast(input: ForecastInput): ForecastResult {
   const { openingBalance, baseCurrency, startDate, horizon, historicalPattern } = input;
@@ -438,7 +438,7 @@ export function generateForecast(input: ForecastInput): ForecastResult {
     hasScheduledItems
   );
 
-  // ── Early exit: insufficient data ──
+  // -- Early exit: insufficient data --
   if (confidence === "INSUFFICIENT") {
     const emptyDay: ForecastDay = {
       date: startDate,
@@ -480,7 +480,7 @@ export function generateForecast(input: ForecastInput): ForecastResult {
     };
   }
 
-  // ── Assemble all forecast items ──
+  // -- Assemble all forecast items --
   const allItems: ForecastItem[] = [];
 
   // 1. Recurring preset items
@@ -514,7 +514,7 @@ export function generateForecast(input: ForecastInput): ForecastResult {
     }
   }
 
-  // 3. Historical pattern — applied as daily average, excluding preset categories
+  // 3. Historical pattern -- applied as daily average, excluding preset categories
   const hasUsablePattern =
     historicalPattern !== null &&
     historicalPattern.transactionCount >= MIN_TRANSACTIONS_FOR_PATTERN &&
@@ -538,9 +538,9 @@ export function generateForecast(input: ForecastInput): ForecastResult {
       historicalPattern.avgDailyExpense * DAILY_PATTERN_SCALE;
 
     // Determine how much of the historical daily average is already covered
-    // by presets — we'll subtract that fraction to avoid double-counting.
+    // by presets -- we'll subtract that fraction to avoid double-counting.
     // (Simple approach: if presets cover >0 of income, we assume the
-    //  historical pattern partially reflects them — so we reduce the pattern
+    //  historical pattern partially reflects them -- so we reduce the pattern
     //  contribution proportionally. The service layer computes this fraction.)
     const presetDailyIncome = allItems
       .filter((i) => i.type === "INCOME" && i.source === "PRESET")
@@ -595,7 +595,7 @@ export function generateForecast(input: ForecastInput): ForecastResult {
     }
   }
 
-  // ── Build day-by-day table ──
+  // -- Build day-by-day table --
   const itemsByDate = new Map<string, ForecastItem[]>();
   for (const item of allItems) {
     const list = itemsByDate.get(item.date) ?? [];
@@ -647,7 +647,7 @@ export function generateForecast(input: ForecastInput): ForecastResult {
     .filter((i) => i.type === "EXPENSE")
     .reduce((s, i) => s + i.amount, 0);
 
-  // ── Minimum projected balance ──
+  // -- Minimum projected balance --
   let minBalance = openingBalance;
   let minDate = startDate;
   let runningForMin = openingBalance;
@@ -659,12 +659,12 @@ export function generateForecast(input: ForecastInput): ForecastResult {
     }
   }
 
-  // ── Range calculation ──
+  // -- Range calculation --
   // Use variability if available, else a conservative ±15% for MEDIUM or ±5% for HIGH
   let variabilityFactor = 0.15; // MEDIUM default
   if (confidence === "HIGH") variabilityFactor = 0.08;
   if (confidence === "LOW") variabilityFactor = 0.30;
-  // "INSUFFICIENT" never reaches here — handled by the early-exit above.
+  // "INSUFFICIENT" never reaches here -- handled by the early-exit above.
 
   if (historicalPattern && hasUsablePattern) {
     const avgVariability =
@@ -676,7 +676,7 @@ export function generateForecast(input: ForecastInput): ForecastResult {
   const projectedRangeLow = projectedClosingBalance - swing;
   const projectedRangeHigh = projectedClosingBalance + swing;
 
-  // ── Source aggregation ──
+  // -- Source aggregation --
   const sources = {
     recurringIncome: allItems
       .filter((i) => i.type === "INCOME" && i.source === "PRESET")
@@ -695,7 +695,7 @@ export function generateForecast(input: ForecastInput): ForecastResult {
       .reduce((s, i) => s + i.amount, 0),
   };
 
-  // ── Data warning ──
+  // -- Data warning --
   let dataWarning: string | null = null;
   if (confidence === "LOW") {
     dataWarning = confidenceReason;
@@ -763,9 +763,9 @@ export function generateForecast(input: ForecastInput): ForecastResult {
   };
 }
 
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 // Scenario generation
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 
 interface ScenarioInputData {
   openingBalance: number;
@@ -792,8 +792,8 @@ interface ScenarioInputData {
  * HIGH_EXPENSES: expenses increased by 10% across the board. Represents
  * unexpected cost overruns or a spike in discretionary spending.
  *
- * These are deliberately simple — not a full re-run of the forecast engine,
- * just linear adjustments on the totals — so they run at zero additional
+ * These are deliberately simple -- not a full re-run of the forecast engine,
+ * just linear adjustments on the totals -- so they run at zero additional
  * DB cost and are pure arithmetic on already-computed numbers.
  *
  * The UI can show them as a three-column summary, not as separate forecasts.
@@ -870,9 +870,9 @@ function generateScenarios(data: ScenarioInputData): ScenarioResult[] {
   return [base, delayed, highExpenses];
 }
 
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 // Insight generation
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 
 interface InsightInputData {
   openingBalance: number;
@@ -890,13 +890,13 @@ interface InsightInputData {
 /**
  * Generates data-backed, actionable insights. Rules:
  *
- * 1. Projected shortfall        — CRITICAL
- * 2. Cash pressure (min < 20% of opening)  — WARNING
- * 3. Overdue invoice count      — WARNING (if invoice income is LOW confidence)
- * 4. High expense concentration — INFO (if recurring expenses > 70% of total)
- * 5. Low forecast confidence    — INFO
+ * 1. Projected shortfall        -- CRITICAL
+ * 2. Cash pressure (min < 20% of opening)  -- WARNING
+ * 3. Overdue invoice count      -- WARNING (if invoice income is LOW confidence)
+ * 4. High expense concentration -- INFO (if recurring expenses > 70% of total)
+ * 5. Low forecast confidence    -- INFO
  *
- * Every insight references an actual number from the forecast — no generic
+ * Every insight references an actual number from the forecast -- no generic
  * advice is generated if the data doesn't support the claim.
  */
 function generateInsights(data: InsightInputData): ForecastInsight[] {
@@ -1000,7 +1000,7 @@ function generateInsights(data: InsightInputData): ForecastInsight[] {
 }
 
 function formatAmount(amount: number): string {
-  // Simple locale-agnostic formatting — the UI uses formatCurrency from lib/format.ts
+  // Simple locale-agnostic formatting -- the UI uses formatCurrency from lib/format.ts
   // for display; this is just for embedding in insight strings.
   const abs = Math.abs(amount);
   if (abs >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)}M`;

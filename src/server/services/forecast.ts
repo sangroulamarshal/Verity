@@ -17,14 +17,14 @@ import { getOutstandingInvoicesAsScheduledItems } from "@/server/services/invoic
 export type { ForecastResult, ForecastHorizon } from "@/server/engines/forecast-engine";
 
 // How many calendar days of transaction history to use for pattern detection.
-// 90 days gives 3 full months — enough to detect monthly recurrence reliably
+// 90 days gives 3 full months -- enough to detect monthly recurrence reliably
 // without being so long that a major operational change (new product line,
 // lost client) makes historical averages misleading.
 const HISTORY_DAYS = 90;
 
-// ────────────────────────────────────────────────────────────────────────────
-// Historical pattern — aggregate from baseAmount (org-base-currency column)
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
+// Historical pattern -- aggregate from baseAmount (org-base-currency column)
+// ----------------------------------------------------------------------------
 
 async function getHistoricalPattern(
   organizationId: string,
@@ -72,7 +72,7 @@ async function getHistoricalPattern(
   const avgDailyIncome = totalIncome / Math.max(1, daysOfHistory);
   const avgDailyExpense = totalExpense / Math.max(1, daysOfHistory);
 
-  // Coefficient of variation (stddev / mean) — 0 = perfectly stable
+  // Coefficient of variation (stddev / mean) -- 0 = perfectly stable
   const incomeMean = Number(row.incomeMean ?? 0);
   const incomeStddev = Number(row.incomeStddev ?? 0);
   const expenseMean = Number(row.expenseMean ?? 0);
@@ -92,9 +92,9 @@ async function getHistoricalPattern(
 }
 
 
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 // Seasonality -- monthly income/expense ratios from 6 months of history
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 
 // Minimum months of history for seasonality to be computed at all.
 const SEASONALITY_HISTORY_DAYS = 180; // ~6 months
@@ -165,9 +165,9 @@ async function getMonthlySeasonality(
   return result;
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Recurring templates — from transaction_presets
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
+// Recurring templates -- from transaction_presets
+// ----------------------------------------------------------------------------
 
 /**
  * For a preset to contribute to the forecast, we need its amount in the
@@ -222,11 +222,11 @@ async function getPresetsAsTemplates(
       monthlyAmount = Number(latestTx.baseAmount);
       typicalDayOfMonth = Number(latestTx.date.slice(8, 10));
     } else if (preset.currency === baseCurrency) {
-      // Preset is already in base currency — use its amount directly
+      // Preset is already in base currency -- use its amount directly
       monthlyAmount = Number(preset.amount);
     }
     // else: preset is in a foreign currency and has no transactions yet.
-    // We use the raw amount as a rough proxy — acceptable since this will
+    // We use the raw amount as a rough proxy -- acceptable since this will
     // only apply to new/unused presets and confidence will be MEDIUM.
 
     results.push({
@@ -242,16 +242,16 @@ async function getPresetsAsTemplates(
   return results;
 }
 
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 // Current cash position
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 
 /**
  * Current cash = sum of all historical INCOME baseAmounts - sum of all
  * EXPENSE baseAmounts, up to and including `asOfDate`.
  *
  * This is the same formula as the dashboard's net cash flow, but scoped
- * to a date — it gives the "opening balance" for the forecast.
+ * to a date -- it gives the "opening balance" for the forecast.
  *
  * Note: Verity does not yet have a dedicated "bank balance" concept or
  * external balance sync. This is the best available approximation from
@@ -279,9 +279,9 @@ async function getCurrentCashPosition(
   return Number(row.totalIncome) - Number(row.totalExpense);
 }
 
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 // Utility
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 
 function daysBetween(from: string, to: string): number {
   const a = new Date(`${from}T00:00:00Z`);
@@ -293,13 +293,13 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 // Public API
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 
 export interface ForecastOptions {
   horizon: ForecastHorizon;
-  /** Override today's date — useful for testing. */
+  /** Override today's date -- useful for testing. */
   asOfDate?: string;
 }
 
@@ -307,13 +307,13 @@ export interface ForecastOptions {
  * Generates a cash-flow forecast for the given organization.
  *
  * Security: `organizationId` MUST come from the authenticated session,
- * never from a route param or request body — same contract as every
+ * never from a route param or request body -- same contract as every
  * other service in this codebase. All queries below are scoped to it.
  *
  * Currency: all amounts in the returned forecast are in the org's
  * baseCurrency. Display-currency conversion (the per-user preference)
  * is the caller's responsibility (forecast/page.tsx), same pattern as
- * dashboard-display.ts — we don't want FX-rate calls inside the
+ * dashboard-display.ts -- we don't want FX-rate calls inside the
  * forecast engine.
  */
 export async function getForecast(
@@ -324,7 +324,7 @@ export async function getForecast(
   const asOfDate = options.asOfDate ?? todayISO();
   const startDate = addDays(asOfDate, 1); // forecast starts tomorrow
 
-  // Resolve org base currency — all monetary values in the forecast
+  // Resolve org base currency -- all monetary values in the forecast
   // use this as the common unit.
   const [org] = await db
     .select({ baseCurrency: organizations.baseCurrency })

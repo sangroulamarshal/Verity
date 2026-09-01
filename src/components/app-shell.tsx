@@ -9,6 +9,7 @@ import {
   Users,
   Upload,
   ShieldAlert,
+  TrendingUp,
   Settings as SettingsIcon,
   Menu,
   X,
@@ -33,7 +34,7 @@ interface NavGroup {
 }
 
 // Only routes that exist today. Cash Flow has no section here on
-// purpose — it doesn't have a page yet (see README phase table), and a
+// purpose -- it doesn't have a page yet (see README phase table), and a
 // nav item that 404s, or worse, opens a page full of invented numbers,
 // is worse than no nav item at all. Customers (Phase 5) and Risk
 // (Phase 6) moved out of that "doesn't exist yet" category once their
@@ -45,6 +46,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
       { href: "/customers", label: "Customers", icon: Users },
+      { href: "/cashflow", label: "Cash Flow", icon: TrendingUp },
       { href: "/risk", label: "Risk", icon: ShieldAlert },
     ],
   },
@@ -82,7 +84,7 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 )}
               >
-                {/* Thin active indicator — never relies on text color alone
+                {/* Thin active indicator -- never relies on text color alone
                     (brief section 4). */}
                 <span
                   className={cn(
@@ -152,7 +154,7 @@ export function AppShell({
 
   return (
     <div className="flex h-dvh overflow-hidden">
-      {/* Desktop sidebar — bg-sidebar, a distinct surface from bg-card so
+      {/* Desktop sidebar -- bg-sidebar, a distinct surface from bg-card so
           the sidebar reads as its own plane rather than blending into the
           cards sitting in the main column (brief section 7). */}
       <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-sidebar py-5 text-sidebar-foreground md:flex">

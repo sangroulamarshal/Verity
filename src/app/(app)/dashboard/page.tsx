@@ -8,6 +8,8 @@ import { verifySession } from "@/server/services/session";
 import { getDashboardSummary } from "@/server/services/dashboard";
 import { resolveDisplaySummary } from "@/server/services/dashboard-display";
 import { getRiskSummary } from "@/server/services/risk";
+import { getForecastSummary } from "@/server/services/forecast";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CashFlowChart } from "@/components/cash-flow-chart";
@@ -51,7 +53,10 @@ export default async function DashboardPage() {
       .limit(1),
     getDashboardSummary(session.organizationId),
   ]);
-  const riskSummary = await getRiskSummary(session.organizationId);
+  const [riskSummary, forecastSummary] = await Promise.all([
+    getRiskSummary(session.organizationId),
+    getForecastSummary(session.organizationId, 30).catch(() => null),
+  ]);
 
   const baseCurrency = org?.baseCurrency ?? "GBP";
   const requestedCurrency = session.displayCurrency ?? baseCurrency;
@@ -89,7 +94,7 @@ export default async function DashboardPage() {
         </h1>
         {rateUnavailable && (
           <p className="mt-1 text-xs text-muted-foreground">
-            Showing totals in {baseCurrency} — the exchange rate to {requestedCurrency} is
+            Showing totals in {baseCurrency} -- the exchange rate to {requestedCurrency} is
             currently unavailable.
           </p>
         )}
@@ -195,7 +200,7 @@ export default async function DashboardPage() {
                         (t.type === "INCOME" ? "text-income" : "text-expense")
                       }
                     >
-                      {t.type === "INCOME" ? "+" : "−"}
+                      {t.type === "INCOME" ? "+" : "-"}
                       {formatCurrency(t.amount, t.currency)}
                     </p>
                   </li>
@@ -231,6 +236,54 @@ export default async function DashboardPage() {
                     {riskSummary.requiringReview === 1 ? "" : "s"} require review
                   </p>
                 )}
+              </CardContent>
+            </Card>
+          )}
+          {forecastSummary && forecastSummary.confidence !== "INSUFFICIENT" && (
+            <Card className="mt-4">
+              <CardHeader className="flex-row items-center justify-between">
+                <CardTitle>Cash flow forecast</CardTitle>
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/cashflow">View forecast</Link>
+                </Button>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-8">
+                <div>
+                  <p className="text-xs text-muted-foreground">Current</p>
+                  <p className="text-xl font-semibold tabular-nums">
+                    {formatCurrency(forecastSummary.currentBalance, forecastSummary.baseCurrency)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">30-day projected</p>
+                  <p className={cn(
+                    "text-xl font-semibold tabular-nums",
+                    forecastSummary.projectedBalance < 0 ? "text-destructive" : ""
+                  )}>
+                    {formatCurrency(forecastSummary.projectedBalance, forecastSummary.baseCurrency)}
+                  </p>
+                </div>
+                {forecastSummary.hasProjectedShortfall && (
+                  <p className="text-sm font-medium text-destructive">
+                    Projected shortfall around {forecastSummary.minimumBalance.date}
+                  </p>
+                )}
+                <div className="sm:ml-auto">
+                  <span className={cn(
+                    "inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium",
+                    forecastSummary.confidence === "HIGH"
+                      ? "bg-income/15 text-green-700 dark:text-green-400"
+                      : forecastSummary.confidence === "MEDIUM"
+                        ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
+                        : "bg-orange-500/15 text-orange-700 dark:text-orange-400"
+                  )}>
+                    {forecastSummary.confidence === "HIGH"
+                      ? "High confidence"
+                      : forecastSummary.confidence === "MEDIUM"
+                        ? "Medium confidence"
+                        : "Low confidence"}
+                  </span>
+                </div>
               </CardContent>
             </Card>
           )}

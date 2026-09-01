@@ -60,9 +60,9 @@ export interface ListInvoicesResult {
 
 const DEFAULT_PAGE_SIZE = 20;
 
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 // FX helpers (same pattern as transactions service)
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 
 async function resolveBaseAmountFields(
   totalAmount: string,
@@ -95,9 +95,9 @@ async function nextSequenceNumber(organizationId: string): Promise<number> {
   return (row?.max ?? 0) + 1;
 }
 
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 // CRUD
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 
 export async function createInvoice(
   organizationId: string,
@@ -263,9 +263,9 @@ export async function markInvoicePaid(
   return row ?? null;
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Forecast integration — the core of Phase 7B
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
+// Forecast integration -- the core of Phase 7B
+// ----------------------------------------------------------------------------
 
 /**
  * Customer payment behaviour derived from historical invoices for a
@@ -285,7 +285,7 @@ export interface CustomerPaymentBehaviour {
 
 /**
  * Computes payment behaviour for customers that have relevant outstanding
- * invoices in the forecast window. Uses only PAID invoice history —
+ * invoices in the forecast window. Uses only PAID invoice history --
  * we measure what actually happened.
  *
  * Returns a Map<customerId, behaviour> for efficient lookup.
@@ -297,7 +297,7 @@ async function getCustomerPaymentBehaviours(
   if (customerIds.length === 0) return new Map();
 
   // Query PAID invoices for these customers (only rows with a paidAt
-  // timestamp — those we actually know the settlement date for).
+  // timestamp -- those we actually know the settlement date for).
   const paidRows = await db
     .select({
       customerId: invoices.customerId,
@@ -360,7 +360,7 @@ async function getCustomerPaymentBehaviours(
  *   If no history: due date is used as-is.
  *
  * Confidence:
- *   OVERDUE → LOW  (past due and still unpaid — collection less certain)
+ *   OVERDUE → LOW  (past due and still unpaid -- collection less certain)
  *   Customer has HIGH reliability behaviour → MEDIUM (still not guaranteed)
  *   Default → MEDIUM
  */
@@ -370,7 +370,7 @@ export async function getOutstandingInvoicesAsScheduledItems(
   forecastEnd: string
 ): Promise<ScheduledItem[]> {
   // Fetch all outstanding invoices. We cast a wider net than just the
-  // forecast window for the due date — an overdue invoice from last month
+  // forecast window for the due date -- an overdue invoice from last month
   // is still outstanding cash we expect to receive. We cap at 180 days
   // overdue to avoid projecting very old irrecoverable debts.
   const cutoffDate = new Date(`${forecastStart}T00:00:00Z`);
@@ -407,7 +407,7 @@ export async function getOutstandingInvoicesAsScheduledItems(
     const total = Number(invoice.baseTotalAmount);
     const paid = Number(invoice.basePaidAmount);
     const outstanding = Math.max(0, total - paid);
-    if (outstanding <= 0) continue; // fully paid despite status — skip
+    if (outstanding <= 0) continue; // fully paid despite status -- skip
 
     // Expected payment date adjustment
     let expectedDate = invoice.dueDate;
@@ -435,7 +435,7 @@ export async function getOutstandingInvoicesAsScheduledItems(
 
     // Label
     const customerName = invoice.clientName ?? `Invoice ${invoice.invoiceNumber}`;
-    const label = `${customerName} — ${invoice.invoiceNumber}`;
+    const label = `${customerName} -- ${invoice.invoiceNumber}`;
 
     items.push({
       date: expectedDate,
@@ -450,9 +450,9 @@ export async function getOutstandingInvoicesAsScheduledItems(
   return items;
 }
 
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 // Summary helpers
-// ────────────────────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------------
 
 export interface InvoiceSummary {
   totalOutstanding: number;
