@@ -5,18 +5,30 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  ArrowLeftRight,
   Users,
+  FileText,
+  ArrowLeftRight,
+  ArrowUp,
+  ArrowDown,
+  LayoutList,
   Upload,
+  GitMerge,
+  ClipboardList,
   ShieldAlert,
   TrendingUp,
+  BarChart2,
+  Lightbulb,
+  BarChart,
   Settings as SettingsIcon,
   Menu,
   X,
+  ChevronDown,
+  Search,
+  Bell,
+  HelpCircle,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { CurrencySelector } from "@/components/currency-selector";
 import { UserMenu } from "@/components/user-menu";
@@ -26,106 +38,244 @@ interface NavItem {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  badge?: string;
 }
 
 interface NavGroup {
   label: string | null;
+  collapsible?: boolean;
+  defaultCollapsed?: boolean;
   items: NavItem[];
 }
 
-// Only routes that exist today. Cash Flow has no section here on
-// purpose -- it doesn't have a page yet (see README phase table), and a
-// nav item that 404s, or worse, opens a page full of invented numbers,
-// is worse than no nav item at all. Customers (Phase 5) and Risk
-// (Phase 6) moved out of that "doesn't exist yet" category once their
-// pages actually shipped.
 const NAV_GROUPS: NavGroup[] = [
-  { label: null, items: [{ href: "/dashboard", label: "Overview", icon: LayoutDashboard }] },
+  {
+    label: null,
+    items: [
+      { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+    ],
+  },
   {
     label: "Business",
     items: [
-      { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
       { href: "/customers", label: "Customers", icon: Users },
-      { href: "/cashflow", label: "Cash Flow", icon: TrendingUp },
-      { href: "/risk", label: "Risk", icon: ShieldAlert },
+      { href: "/invoices", label: "Invoices", icon: FileText },
     ],
   },
-  { label: "Data", items: [{ href: "/imports", label: "Imports", icon: Upload }] },
-  { label: "System", items: [{ href: "/settings/account", label: "Settings", icon: SettingsIcon }] },
+  {
+    label: "Transactions",
+    collapsible: true,
+    items: [
+      { href: "/transactions", label: "Overview", icon: LayoutDashboard },
+      { href: "/transactions/all", label: "All Transactions", icon: LayoutList },
+      { href: "/transactions/income", label: "Income", icon: ArrowUp },
+      { href: "/transactions/expenses", label: "Expenses", icon: ArrowDown },
+      { href: "/transactions/presets", label: "Presets", icon: ArrowLeftRight },
+      { href: "/imports", label: "Imports", icon: Upload },
+      { href: "/transactions/reconciliation", label: "Reconciliation", icon: GitMerge },
+      { href: "/transactions/audit-log", label: "Audit Log", icon: ClipboardList },
+    ],
+  },
+  {
+    label: "Intelligence",
+    items: [
+      { href: "/risk", label: "Risk", icon: ShieldAlert },
+      { href: "/cashflow", label: "Cash Flow", icon: TrendingUp },
+      { href: "/cashflow/forecast", label: "Forecast", icon: BarChart2 },
+      { href: "/insights", label: "Insights", icon: Lightbulb },
+    ],
+  },
+  {
+    label: "Reporting",
+    items: [
+      { href: "/reports", label: "Reports", icon: BarChart },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { href: "/settings/account", label: "Settings", icon: SettingsIcon },
+    ],
+  },
 ];
 
-function isActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
+const LIVE_ROUTES = new Set([
+  "/dashboard",
+  "/customers",
+  "/transactions",
+  "/transactions/presets",
+  "/transactions/audit-log",
+  "/imports",
+  "/risk",
+  "/cashflow",
+  "/settings",
+  "/settings/account",
+  "/settings/organization",
+  "/settings/members",
+  "/settings/security",
+  "/settings/notifications",
+  "/settings/preferences",
+]);
+
+function routeIsLive(href: string): boolean {
+  if (LIVE_ROUTES.has(href)) return true;
+  for (const live of LIVE_ROUTES) {
+    if (href.startsWith(live + "/")) return true;
+  }
+  return false;
 }
 
-function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+function isActive(pathname: string, href: string) {
+  if (href === "/dashboard") return pathname === href;
+  if (href === "/transactions") return pathname === "/transactions";
+  return pathname === href || pathname.startsWith(href + "/");
+}
+
+function NavLink({
+  item,
+  active,
+  onNavigate,
+}: {
+  item: NavItem;
+  active: boolean;
+  onNavigate?: () => void;
+}) {
+  const Icon = item.icon;
+  const live = routeIsLive(item.href);
+
+  if (!live) {
+    return (
+      <span className="group flex items-center gap-2.5 rounded-md py-1.5 pl-3 pr-2.5 text-[13px] text-muted-foreground/35 cursor-default select-none">
+        <Icon className="size-[14px] shrink-0 opacity-30" />
+        {item.label}
+        <span className="ml-auto text-[10px] text-muted-foreground/25 font-mono">soon</span>
+      </span>
+    );
+  }
+
   return (
-    <nav className="flex flex-col gap-4 px-3">
-      {NAV_GROUPS.map((group, index) => (
-        <div key={group.label ?? `group-${index}`} className="flex flex-col gap-0.5">
-          {group.label && (
-            <p className="px-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+    <Link
+      href={item.href}
+      onClick={onNavigate}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "group relative flex items-center gap-2.5 rounded-md py-1.5 pl-3 pr-2.5 text-[13px] transition-colors duration-150",
+        active
+          ? "bg-accent/50 text-accent-foreground font-medium"
+          : "text-muted-foreground hover:bg-elevated hover:text-foreground"
+      )}
+    >
+      <span
+        className={cn(
+          "absolute left-0 top-1/2 h-[14px] w-[3px] -translate-y-1/2 rounded-r-full bg-primary transition-opacity duration-150",
+          active ? "opacity-100" : "opacity-0"
+        )}
+        aria-hidden
+      />
+      <Icon
+        className={cn(
+          "size-[14px] shrink-0 transition-colors duration-150",
+          active ? "text-primary" : "text-muted-foreground/50 group-hover:text-muted-foreground"
+        )}
+      />
+      <span className="truncate">{item.label}</span>
+      {item.badge && (
+        <span className="ml-auto rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-medium text-primary leading-none">
+          {item.badge}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+function SidebarNavGroup({
+  group,
+  pathname,
+  onNavigate,
+}: {
+  group: NavGroup;
+  pathname: string;
+  onNavigate?: () => void;
+}) {
+  const hasActive = group.items.some((i) => isActive(pathname, i.href));
+  const [collapsed, setCollapsed] = React.useState(
+    group.defaultCollapsed ?? false
+  );
+
+  const showItems = !group.collapsible || !collapsed || hasActive;
+
+  return (
+    <div className="flex flex-col">
+      {group.label && (
+        <div className="px-3 pt-4 pb-1">
+          {group.collapsible ? (
+            <button
+              type="button"
+              onClick={() => setCollapsed((c) => !c)}
+              className="flex w-full items-center justify-between text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 hover:text-muted-foreground/60 transition-colors"
+            >
+              {group.label}
+              <ChevronDown
+                className={cn(
+                  "size-3 transition-transform duration-200",
+                  collapsed && !hasActive ? "-rotate-90" : ""
+                )}
+              />
+            </button>
+          ) : (
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">
               {group.label}
             </p>
           )}
-          {group.items.map((item) => {
-            const active = isActive(pathname, item.href);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onNavigate}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "group relative flex items-center gap-2.5 rounded-md py-2 pl-3.5 pr-2.5 text-sm font-medium transition-colors",
-                  active
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                )}
-              >
-                {/* Thin active indicator -- never relies on text color alone
-                    (brief section 4). */}
-                <span
-                  className={cn(
-                    "absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-primary transition-opacity",
-                    active ? "opacity-100" : "opacity-0"
-                  )}
-                  aria-hidden
-                />
-                <Icon
-                  className={cn(
-                    "size-4 shrink-0 transition-colors",
-                    active ? "text-primary" : "text-muted-foreground/80 group-hover:text-foreground"
-                  )}
-                />
-                {item.label}
-              </Link>
-            );
-          })}
         </div>
-      ))}
-    </nav>
+      )}
+      {showItems && (
+        <div className="flex flex-col gap-0.5 px-2">
+          {group.items.map((item) => (
+            <NavLink
+              key={item.href}
+              item={item}
+              active={isActive(pathname, item.href)}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
 function Brand() {
   return (
     <Link href="/dashboard" className="flex items-center gap-2.5 px-3">
-      {/* eslint-disable-next-line @next/next/no-img-element -- a small,
-          static brand mark; next/image's optimization pipeline isn't
-          warranted for a single fixed-size asset used once per page. */}
-      <img src="/logo-mark.png" alt="" width={32} height={32} className="size-8 shrink-0" />
-      <span className="text-base font-semibold tracking-tight">Verity</span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo-mark.png" alt="" width={26} height={26} className="size-[26px] shrink-0" />
+      <span className="text-[15px] font-bold tracking-tight text-foreground">
+        VERITY
+      </span>
     </Link>
   );
 }
 
-function OrgBox({ orgName, role }: { orgName: string; role: UserRole }) {
+function WorkspaceBox({ orgName }: { orgName: string }) {
   return (
-    <div className="rounded-md border border-border bg-secondary/50 px-2.5 py-2">
-      <p className="truncate text-xs font-medium text-foreground">{orgName}</p>
-      <p className="truncate text-xs text-muted-foreground">{ROLE_LABELS[role]}</p>
+    <div className="mx-3 mt-3 flex cursor-pointer items-center justify-between rounded-md border border-border bg-elevated/60 px-2.5 py-2 hover:bg-elevated transition-colors">
+      <p className="truncate text-[12px] font-medium text-foreground/90">{orgName}</p>
+      <ChevronDown className="ml-2 size-3 shrink-0 text-muted-foreground/60" />
+    </div>
+  );
+}
+
+function SidebarSearch() {
+  return (
+    <div className="mx-3 mt-2.5">
+      <div className="flex items-center gap-2 rounded-md border border-border bg-elevated/30 px-2.5 py-1.5 cursor-text hover:bg-elevated/50 transition-colors">
+        <Search className="size-3.5 shrink-0 text-muted-foreground/40" />
+        <span className="flex-1 text-[12px] text-muted-foreground/40">Find</span>
+        <kbd className="rounded bg-elevated px-1 py-0.5 text-[9px] font-mono text-muted-foreground/30">
+          {"\u2318"}K
+        </kbd>
+      </div>
     </div>
   );
 }
@@ -152,73 +302,128 @@ export function AppShell({
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
 
+  const sidebarContent = (onNavigate?: () => void) => (
+    <>
+      <WorkspaceBox orgName={orgName} />
+      <SidebarSearch />
+      <div className="flex-1 overflow-y-auto scrollbar-thin mt-1">
+        {NAV_GROUPS.map((group, i) => (
+          <SidebarNavGroup
+            key={group.label ?? `g${i}`}
+            group={group}
+            pathname={pathname}
+            onNavigate={onNavigate}
+          />
+        ))}
+        <div className="h-4" />
+      </div>
+      <div className="border-t border-sidebar-border px-3 py-3">
+        <Link
+          href="/settings/account"
+          onClick={onNavigate}
+          className="flex items-center gap-2 text-[12px] text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors"
+        >
+          <HelpCircle className="size-3.5" />
+          Help &amp; Support
+        </Link>
+      </div>
+      <div className="border-t border-sidebar-border px-3 py-2.5">
+        <UserMenu email={email} fullName={fullName} role={role} logoutAction={logoutAction} sidebar />
+      </div>
+    </>
+  );
+
   return (
-    <div className="flex h-dvh overflow-hidden">
-      {/* Desktop sidebar -- bg-sidebar, a distinct surface from bg-card so
-          the sidebar reads as its own plane rather than blending into the
-          cards sitting in the main column (brief section 7). */}
-      <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-sidebar py-5 text-sidebar-foreground md:flex">
-        <div className="mb-7">
+    <div className="flex h-dvh overflow-hidden bg-background">
+      {/* Desktop sidebar */}
+      <aside className="hidden w-[220px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
+        <div className="flex h-[52px] shrink-0 items-center border-b border-sidebar-border">
           <Brand />
         </div>
-        <NavLinks pathname={pathname} />
-        <div className="mt-auto px-3 pt-4">
-          <OrgBox orgName={orgName} role={role} />
-        </div>
+        {sidebarContent()}
       </aside>
 
-      {/* Mobile off-canvas nav */}
+      {/* Mobile overlay */}
       {mobileNavOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
+        <div className="fixed inset-0 z-50 md:hidden">
           <button
             type="button"
             aria-label="Close navigation"
-            className="absolute inset-0 bg-foreground/20"
+            className="absolute inset-0 bg-black/70"
             onClick={() => setMobileNavOpen(false)}
           />
-          <aside className="relative flex h-full w-64 flex-col border-r border-border bg-sidebar py-5 text-sidebar-foreground">
-            <div className="mb-7 flex items-center justify-between px-3">
+          <aside className="relative flex h-full w-[220px] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
+            <div className="flex h-[52px] shrink-0 items-center justify-between border-b border-sidebar-border pr-2">
               <Brand />
-              <Button
+              <button
                 type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Close navigation"
+                aria-label="Close"
+                className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-elevated"
                 onClick={() => setMobileNavOpen(false)}
               >
-                <X />
-              </Button>
+                <X className="size-4" />
+              </button>
             </div>
-            <NavLinks pathname={pathname} onNavigate={() => setMobileNavOpen(false)} />
-            <div className="mt-auto px-3 pt-4">
-              <OrgBox orgName={orgName} role={role} />
-            </div>
+            {sidebarContent(() => setMobileNavOpen(false))}
           </aside>
         </div>
       )}
 
       {/* Main column */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-4 md:px-6">
-          <Button
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        {/* Top bar */}
+        <header className="flex h-[52px] shrink-0 items-center gap-2 border-b border-border bg-surface px-4">
+          <button
             type="button"
-            variant="ghost"
-            size="icon"
             aria-label="Open navigation"
-            className="md:hidden"
+            className="mr-1 flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-elevated hover:text-foreground md:hidden"
             onClick={() => setMobileNavOpen(true)}
           >
-            <Menu />
-          </Button>
+            <Menu className="size-4" />
+          </button>
+
+          {/* Search */}
+          <div className="hidden flex-1 sm:flex sm:max-w-[480px]">
+            <div className="flex w-full items-center gap-2 rounded-md border border-border bg-elevated/40 px-3 py-1.5 text-[13px] text-muted-foreground hover:bg-elevated/60 cursor-text transition-colors">
+              <Search className="size-3.5 shrink-0 text-muted-foreground/40" />
+              <span className="flex-1 text-[12px] text-muted-foreground/40">
+                Search transactions, customers, invoices...
+              </span>
+              <kbd className="rounded bg-elevated px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground/30">
+                {"\u2318"}K
+              </kbd>
+            </div>
+          </div>
 
           <div className="flex-1" />
 
-          <CurrencySelector value={displayCurrency} />
-          <ThemeToggle />
-          <UserMenu email={email} fullName={fullName} role={role} logoutAction={logoutAction} />
+          <div className="flex items-center gap-1">
+            {/* Notifications */}
+            <button
+              type="button"
+              aria-label="Notifications (3 unread)"
+              className="relative flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-elevated hover:text-foreground transition-colors"
+            >
+              <Bell className="size-4" />
+              <span
+                className="absolute right-1 top-1 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground leading-none"
+                aria-hidden
+              >
+                3
+              </span>
+            </button>
+
+            <div className="mx-1 h-5 w-px bg-border" />
+            <CurrencySelector value={displayCurrency} />
+            <ThemeToggle />
+            <div className="mx-1 h-5 w-px bg-border" />
+            <UserMenu email={email} fullName={fullName} role={role} logoutAction={logoutAction} />
+          </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto bg-background">{children}</main>
+        <main className="flex-1 overflow-y-auto scrollbar-thin bg-background">
+          {children}
+        </main>
       </div>
     </div>
   );

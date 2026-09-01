@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LogOut, Settings } from "lucide-react";
+import { ChevronDown, LogOut, Settings } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +17,8 @@ interface UserMenuProps {
   fullName: string | null;
   role: UserRole;
   logoutAction: () => void | Promise<void>;
+  /** When true, renders as a compact sidebar footer row instead of icon-only trigger */
+  sidebar?: boolean;
 }
 
 function initialsFor(fullName: string | null, email: string): string {
@@ -27,17 +29,34 @@ function initialsFor(fullName: string | null, email: string): string {
   return email.slice(0, 2).toUpperCase();
 }
 
-export function UserMenu({ email, fullName, role, logoutAction }: UserMenuProps) {
+export function UserMenu({ email, fullName, role, logoutAction, sidebar }: UserMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label="Account menu"
-          className="flex size-8 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80"
-        >
-          {initialsFor(fullName, email)}
-        </button>
+        {sidebar ? (
+          <button
+            type="button"
+            aria-label="Account menu"
+            className="flex w-full items-center gap-2.5 rounded-md px-0 py-1 text-left hover:bg-elevated transition-colors"
+          >
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-[11px] font-semibold text-primary">
+              {initialsFor(fullName, email)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[12px] font-medium text-foreground/90">{fullName || email}</p>
+              <p className="truncate text-[11px] text-muted-foreground/60">{ROLE_LABELS[role]}</p>
+            </div>
+            <ChevronDown className="size-3 shrink-0 text-muted-foreground/40" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            aria-label="Account menu"
+            className="flex size-8 items-center justify-center rounded-full bg-primary/20 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/30"
+          >
+            {initialsFor(fullName, email)}
+          </button>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="flex flex-col gap-0.5 font-normal">
