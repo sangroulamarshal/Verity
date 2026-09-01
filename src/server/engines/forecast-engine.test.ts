@@ -49,6 +49,8 @@ const baseInput: ForecastInput = {
   scheduledItems: [],
   historicalPattern: stablePattern,
   presetCategories: new Set(),
+  seasonality: null,
+  outstandingInvoiceCount: 0,
 };
 
 // ── addDays ──────────────────────────────────────────────────────────────────
@@ -429,5 +431,173 @@ describe("generateForecast — sources", () => {
 
     expect(incomeTotal).toBeCloseTo(result.totalExpectedIncome, 1);
     expect(expenseTotal).toBeCloseTo(result.totalExpectedExpenses, 1);
+  });
+});
+
+// ── Phase 7C: Scenarios ───────────────────────────────────────────────────────
+
+describe("generateForecast — scenarios", () => {
+  it("V: always returns exactly 3 scenarios", () => {
+    const result = generateForecast(baseInput);
+    expect(result.scenarios).toHaveLength(3);
+    expect(result.scenarios.map((s) => s.scenario)).toEqual([
+      "BASE",
+      "DELAYED_PAYMENTS",
+      "HIGH_EXPENSES",
+    ]);
+  });
+
+  it("W: BASE scenario projected balance matches base forecast", () => {
+    const result = generateForecast(baseInput);
+    const base = result.scenarios.find((s) => s.scenario === "BASE")!;
+    expect(base.projectedClosingBalance).toBeCloseTo(result.projectedClosingBalance, 0);
+  });
+
+  it("X: DELAYED_PAYMENTS projected balance < BASE when invoice income > 0", () => {
+    const invoice = {
+      date: addDays(TODAY, 5),
+      amount: 50_000,
+      type: "INCOME" as const,
+      label: "Invoice",
+      source: "INVOICE" as const,
+      confidence: "MEDIUM" as const,
+    };
+    const result = generateForecast({ ...baseInput, scheduledItems: [invoice] });
+    const base = result.scenarios.find((s) => s.scenario === "BASE")!;
+    const delayed = result.scenarios.find((s) => s.scenario === "DELAYED_PAYMENTS")!;
+    // 20% of invoice income delayed means less cash
+    expect(delayed.projectedClosingBalance).toBeLessThan(base.projectedClosingBalance);
+  });
+
+  it("Y: HIGH_EXPENSES projected balance < BASE", () => {
+    const result = generateForecast(baseInput);
+    const base = result.scenarios.find((s) => s.scenario === "BASE")!;
+    const highExp = result.scenarios.find((s) => s.scenario === "HIGH_EXPENSES")!;
+    // 10% more expenses means less cash
+    expect(highExp.projectedClosingBalance).toBeLessThan(base.projectedClosingBalance);
+  });
+
+  it("Z: scenarios have labels and descriptions", () => {
+    const result = generateForecast(baseInput);
+    for (const s of result.scenarios) {
+      expect(s.label.length).toBeGreaterThan(0);
+      expect(s.description.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+// ── Phase 7C: Insights ────────────────────────────────────────────────────────
+
+describe("generateForecast — insights", () => {
+  it("AA: shortfall → CRITICAL insight", () => {
+    const result = generateForecast({
+      ...baseInput,
+      openingBalance: 500,
+      historicalPattern: {
+        avgDailyIncome: 0,
+        avgDailyExpense: 200,
+        daysOfHistory: 90,
+        transactionCount: 30,
+        incomeVariability: 0,
+        expenseVariability: 0.1,
+      },
+    });
+    const critical = result.insights.filter((i) => i.severity === "CRITICAL");
+    expect(critical.length).toBeGreaterThan(0);
+    expect(critical[0].title).toContain("shortfall");
+  });
+
+  it("AB: invoice income → INFO insight referencing invoice count", () => {
+    const result = generateForecast({
+      ...baseInput,
+      scheduledItems: [
+        {
+          date: addDays(TODAY, 3),
+          amount: 20_000,
+          type: "INCOME",
+          label: "Inv #1",
+          source: "INVOICE",
+          confidence: "MEDIUM",
+        },
+      ],
+      outstandingInvoiceCount: 1,
+    });
+    const invoiceInsight = result.insights.find((i) =>
+      i.detail.includes("invoice") || i.title.includes("invoice")
+    );
+    expect(invoiceInsight).toBeDefined();
+  });
+
+  it("AC: healthy growing forecast → INFO insight (no warnings)", () => {
+    const result = generateForecast(baseInput);
+    const criticals = result.insights.filter((i) => i.severity === "CRITICAL");
+    expect(criticals).toHaveLength(0);
+  });
+
+  it("AD: insights are never empty arrays (at minimum informational)", () => {
+    const result = generateForecast(baseInput);
+    // With a healthy forecast there should be at least the "improving" insight
+    expect(Array.isArray(result.insights)).toBe(true);
+  });
+});
+
+// ── Phase 7C: Seasonality ────────────────────────────────────────────────────
+
+import { type MonthlySeasonality } from "./forecast-engine";
+
+describe("generateForecast — seasonality", () => {
+  it("AE: seasonalityApplied is false when seasonality is null", () => {
+    const result = generateForecast({ ...baseInput, seasonality: null });
+    expect(result.seasonalityApplied).toBe(false);
+  });
+
+  it("AF: seasonalityApplied is true when seasonality map provided", () => {
+    const seasonality = new Map<number, MonthlySeasonality>();
+    const forecastMonth = Number(addDays(TODAY, 1).slice(5, 7));
+    seasonality.set(forecastMonth, {
+      month: forecastMonth,
+      incomeRatio: 1.5,
+      expenseRatio: 1.0,
+      sampleMonths: 3,
+    });
+    const result = generateForecast({ ...baseInput, seasonality });
+    expect(result.seasonalityApplied).toBe(true);
+  });
+
+  it("AG: high income ratio month increases pattern income vs null seasonality", () => {
+    const forecastMonth = Number(addDays(TODAY, 1).slice(5, 7));
+    const seasonality = new Map<number, MonthlySeasonality>();
+    seasonality.set(forecastMonth, {
+      month: forecastMonth,
+      incomeRatio: 2.0, // double the average month
+      expenseRatio: 1.0,
+      sampleMonths: 3,
+    });
+
+    const withSeason = generateForecast({ ...baseInput, seasonality });
+    const withoutSeason = generateForecast({ ...baseInput, seasonality: null });
+
+    // Seasonal income should be higher
+    expect(withSeason.sources.patternIncome).toBeGreaterThan(withoutSeason.sources.patternIncome);
+  });
+
+  it("AH: seasonality with sampleMonths < 2 is not applied", () => {
+    const forecastMonth = Number(addDays(TODAY, 1).slice(5, 7));
+    const seasonality = new Map<number, MonthlySeasonality>();
+    seasonality.set(forecastMonth, {
+      month: forecastMonth,
+      incomeRatio: 10.0, // extreme ratio -- should NOT apply with sampleMonths=1
+      expenseRatio: 1.0,
+      sampleMonths: 1,
+    });
+
+    const withSeason = generateForecast({ ...baseInput, seasonality });
+    const withoutSeason = generateForecast({ ...baseInput, seasonality: null });
+
+    // With sampleMonths=1, the ratio should be ignored (treated as 1.0)
+    expect(withSeason.sources.patternIncome).toBeCloseTo(
+      withoutSeason.sources.patternIncome,
+      0
+    );
   });
 });

@@ -142,14 +142,62 @@ export interface HistoricalPattern {
 }
 
 /**
+ * Monthly seasonality factor for a specific calendar month (1-12).
+ * incomeRatio and expenseRatio are multipliers relative to the
+ * organization's overall monthly average:
+ *   1.0 = exactly average
+ *   1.3 = 30% above average
+ *   0.7 = 30% below average
+ *
+ * Computed from 6+ months of history by the service layer.
+ * Only applied when sampleMonths >= 3 for that specific month.
+ */
+export interface MonthlySeasonality {
+  /** Calendar month 1-12. */
+  month: number;
+  /** Income ratio vs overall average for this month. */
+  incomeRatio: number;
+  /** Expense ratio vs overall average for this month. */
+  expenseRatio: number;
+  /** How many historical occurrences of this month backed the ratio. */
+  sampleMonths: number;
+}
+
+/** Scenario variant for the three-case model. */
+export type ScenarioType = "BASE" | "DELAYED_PAYMENTS" | "HIGH_EXPENSES";
+
+export interface ScenarioResult {
+  scenario: ScenarioType;
+  label: string;
+  description: string;
+  projectedClosingBalance: number;
+  projectedRangeLow: number;
+  projectedRangeHigh: number;
+  totalExpectedIncome: number;
+  totalExpectedExpenses: number;
+  hasProjectedShortfall: boolean;
+  minimumBalance: { amount: number; date: string };
+}
+
+/**
+ * A data-backed, actionable insight for the user.
+ * Every insight references a concrete fact from the forecast data.
+ */
+export interface ForecastInsight {
+  title: string;
+  detail: string;
+  severity: "INFO" | "WARNING" | "CRITICAL";
+}
+
+/**
  * Everything the forecast engine needs to generate a projection.
- * Assembled by server/services/forecast.ts — never by client code.
+ * Assembled by server/services/forecast.ts -- never by client code.
  */
 export interface ForecastInput {
-  /** Current cash position (total income − total expenses, in base currency). */
+  /** Current cash position (total income minus total expenses, in base currency). */
   openingBalance: number;
-  /** ISO 4217 org base currency code. Included for documentation — the
-   * engine never converts; all amounts must already be in this currency. */
+  /** ISO 4217 org base currency code. The engine never converts; all amounts
+   * must already be in this currency. */
   baseCurrency: string;
   /** Forecast start date (inclusive). Format: YYYY-MM-DD. */
   startDate: string;
@@ -160,10 +208,17 @@ export interface ForecastInput {
   scheduledItems: ScheduledItem[];
   /** Historical pattern, or null when insufficient data exists. */
   historicalPattern: HistoricalPattern | null;
-  /** Categories that are already covered by a recurring template.
+  /** Categories already covered by a recurring template.
    * Historical pattern income/expenses for these are excluded to
    * avoid double-counting. */
   presetCategories: Set<string>;
+  /** Monthly seasonality factors keyed by calendar month (1-12).
+   * Null when insufficient history exists. When present, the engine
+   * scales pattern income/expenses by the ratio for each forecast month. */
+  seasonality: Map<number, MonthlySeasonality> | null;
+  /** Count of outstanding invoices contributing to scheduledItems.
+   * More concrete invoices = higher confidence in the income side. */
+  outstandingInvoiceCount: number;
 }
 
 export interface ForecastResult {
@@ -201,6 +256,12 @@ export interface ForecastResult {
   };
   /** Data-quality warning, if any (shown to the user). */
   dataWarning: string | null;
+  /** Three-scenario comparison (base, delayed payments, high expenses). */
+  scenarios: ScenarioResult[];
+  /** Data-backed actionable insights. */
+  insights: ForecastInsight[];
+  /** Whether seasonality data was applied to this forecast. */
+  seasonalityApplied: boolean;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -413,6 +474,9 @@ export function generateForecast(input: ForecastInput): ForecastResult {
         patternExpenses: 0,
       },
       dataWarning: confidenceReason,
+      scenarios: [],
+      insights: [],
+      seasonalityApplied: false,
     };
   }
 
@@ -499,10 +563,18 @@ export function generateForecast(input: ForecastInput): ForecastResult {
         const chunkDate = dates[i];
         const daysInChunk = Math.min(chunkDays, dates.length - i);
 
+        // Apply seasonality scaling if available for this month.
+        // Only applied when the seasonal factor has at least 2 samples
+        // (sampleMonths >= 2) so a single unusual month doesn't skew the scale.
+        const chunkMonth = Number(chunkDate.slice(5, 7));
+        const seasonal = input.seasonality?.get(chunkMonth);
+        const incomeScale = seasonal && seasonal.sampleMonths >= 2 ? seasonal.incomeRatio : 1.0;
+        const expenseScale = seasonal && seasonal.sampleMonths >= 2 ? seasonal.expenseRatio : 1.0;
+
         if (netPatternIncome > 0) {
           allItems.push({
             date: chunkDate,
-            amount: netPatternIncome * daysInChunk,
+            amount: netPatternIncome * daysInChunk * incomeScale,
             type: "INCOME",
             source: "PATTERN",
             label: "Typical income (historical average)",
@@ -512,7 +584,7 @@ export function generateForecast(input: ForecastInput): ForecastResult {
         if (netPatternExpense > 0) {
           allItems.push({
             date: chunkDate,
-            amount: netPatternExpense * daysInChunk,
+            amount: netPatternExpense * daysInChunk * expenseScale,
             type: "EXPENSE",
             source: "PATTERN",
             label: "Typical expenses (historical average)",
@@ -636,6 +708,36 @@ export function generateForecast(input: ForecastInput): ForecastResult {
       "Cash flows show high variability. Projections are based on averages and the actual range may be wider than shown.";
   }
 
+  const seasonalityApplied = input.seasonality !== null && input.seasonality.size > 0;
+
+  // ---- Scenarios ----
+  const scenarios = generateScenarios({
+    openingBalance,
+    totalExpectedIncome,
+    totalExpectedExpenses,
+    projectedClosingBalance,
+    projectedRangeLow,
+    projectedRangeHigh,
+    variabilityFactor,
+    minimumBalance: { amount: minBalance, date: minDate },
+    invoiceIncome: sources.invoiceIncome,
+    days,
+  });
+
+  // ---- Insights ----
+  const insights = generateInsights({
+    openingBalance,
+    projectedClosingBalance,
+    minimumBalance: { amount: minBalance, date: minDate },
+    hasProjectedShortfall: minBalance < 0,
+    outstandingInvoiceCount: input.outstandingInvoiceCount,
+    sources,
+    confidence,
+    historicalPattern,
+    recurringTemplates: input.recurringTemplates,
+    horizon,
+  });
+
   return {
     openingBalance,
     baseCurrency,
@@ -655,5 +757,253 @@ export function generateForecast(input: ForecastInput): ForecastResult {
     hasProjectedShortfall: minBalance < 0,
     sources,
     dataWarning,
+    scenarios,
+    insights,
+    seasonalityApplied,
   };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Scenario generation
+// ────────────────────────────────────────────────────────────────────────────
+
+interface ScenarioInputData {
+  openingBalance: number;
+  totalExpectedIncome: number;
+  totalExpectedExpenses: number;
+  projectedClosingBalance: number;
+  projectedRangeLow: number;
+  projectedRangeHigh: number;
+  variabilityFactor: number;
+  minimumBalance: { amount: number; date: string };
+  invoiceIncome: number;
+  days: ForecastDay[];
+}
+
+/**
+ * Three lightweight scenarios derived from the base forecast.
+ *
+ * BASE: the forecast as computed (no modification).
+ *
+ * DELAYED_PAYMENTS: invoice income reduced by 20% (some customers pay late
+ * or not at all within the period). Pattern income unchanged. All else equal.
+ * This is the "what if 1 in 5 expected invoice payments slips?" scenario.
+ *
+ * HIGH_EXPENSES: expenses increased by 10% across the board. Represents
+ * unexpected cost overruns or a spike in discretionary spending.
+ *
+ * These are deliberately simple — not a full re-run of the forecast engine,
+ * just linear adjustments on the totals — so they run at zero additional
+ * DB cost and are pure arithmetic on already-computed numbers.
+ *
+ * The UI can show them as a three-column summary, not as separate forecasts.
+ */
+function generateScenarios(data: ScenarioInputData): ScenarioResult[] {
+  const {
+    openingBalance,
+    totalExpectedIncome,
+    totalExpectedExpenses,
+    projectedClosingBalance,
+    variabilityFactor,
+    minimumBalance,
+    invoiceIncome,
+  } = data;
+
+  function makeScenario(
+    scenario: ScenarioType,
+    label: string,
+    description: string,
+    adjustedIncome: number,
+    adjustedExpenses: number
+  ): ScenarioResult {
+    const closing = openingBalance + adjustedIncome - adjustedExpenses;
+    const swing = Math.abs(adjustedIncome - adjustedExpenses) * variabilityFactor;
+    const low = closing - swing;
+    const high = closing + swing;
+    // Approximate minimum: if closing < opening, assume minimum occurs near end
+    const minAmt = Math.min(openingBalance, closing);
+    const minDate = minimumBalance.date;
+    return {
+      scenario,
+      label,
+      description,
+      projectedClosingBalance: closing,
+      projectedRangeLow: low,
+      projectedRangeHigh: high,
+      totalExpectedIncome: adjustedIncome,
+      totalExpectedExpenses: adjustedExpenses,
+      hasProjectedShortfall: minAmt < 0,
+      minimumBalance: { amount: minAmt, date: minDate },
+    };
+  }
+
+  // BASE: no change
+  const base = makeScenario(
+    "BASE",
+    "Base case",
+    "Expected income and expenses as forecast.",
+    totalExpectedIncome,
+    totalExpectedExpenses
+  );
+  // Override base with the actual computed values (more precise than re-deriving)
+  base.projectedClosingBalance = projectedClosingBalance;
+
+  // DELAYED_PAYMENTS: 20% of invoice income doesn't arrive in the period
+  const delayedIncome = totalExpectedIncome - invoiceIncome * 0.2;
+  const delayed = makeScenario(
+    "DELAYED_PAYMENTS",
+    "Delayed payments",
+    "20% of expected invoice income delayed beyond the forecast period.",
+    delayedIncome,
+    totalExpectedExpenses
+  );
+
+  // HIGH_EXPENSES: expenses 10% higher
+  const highExpenses = makeScenario(
+    "HIGH_EXPENSES",
+    "Higher expenses",
+    "Expenses 10% above forecast (cost overruns or unplanned spending).",
+    totalExpectedIncome,
+    totalExpectedExpenses * 1.1
+  );
+
+  return [base, delayed, highExpenses];
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Insight generation
+// ────────────────────────────────────────────────────────────────────────────
+
+interface InsightInputData {
+  openingBalance: number;
+  projectedClosingBalance: number;
+  minimumBalance: { amount: number; date: string };
+  hasProjectedShortfall: boolean;
+  outstandingInvoiceCount: number;
+  sources: ForecastResult["sources"];
+  confidence: ForecastConfidence;
+  historicalPattern: HistoricalPattern | null;
+  recurringTemplates: RecurringTemplate[];
+  horizon: ForecastHorizon;
+}
+
+/**
+ * Generates data-backed, actionable insights. Rules:
+ *
+ * 1. Projected shortfall        — CRITICAL
+ * 2. Cash pressure (min < 20% of opening)  — WARNING
+ * 3. Overdue invoice count      — WARNING (if invoice income is LOW confidence)
+ * 4. High expense concentration — INFO (if recurring expenses > 70% of total)
+ * 5. Low forecast confidence    — INFO
+ *
+ * Every insight references an actual number from the forecast — no generic
+ * advice is generated if the data doesn't support the claim.
+ */
+function generateInsights(data: InsightInputData): ForecastInsight[] {
+  const {
+    openingBalance,
+    projectedClosingBalance,
+    minimumBalance,
+    hasProjectedShortfall,
+    outstandingInvoiceCount,
+    sources,
+    confidence,
+    historicalPattern,
+    recurringTemplates,
+    horizon,
+  } = data;
+
+  const insights: ForecastInsight[] = [];
+
+  // 1. Shortfall
+  if (hasProjectedShortfall) {
+    insights.push({
+      title: "Projected cash shortfall",
+      detail: `Cash is projected to fall below zero around ${minimumBalance.date}. Review upcoming expenses and outstanding invoice collections.`,
+      severity: "CRITICAL",
+    });
+  }
+
+  // 2. Cash pressure (minimum < 20% of opening, but not negative)
+  if (
+    !hasProjectedShortfall &&
+    openingBalance > 0 &&
+    minimumBalance.amount < openingBalance * 0.2
+  ) {
+    const pct = Math.round((minimumBalance.amount / openingBalance) * 100);
+    insights.push({
+      title: "Potential cash pressure",
+      detail: `Projected minimum balance (${minimumBalance.date}) is ${pct}% of current cash. Ensure sufficient reserves for unexpected expenses.`,
+      severity: "WARNING",
+    });
+  }
+
+  // 3. Outstanding invoices (only if invoice income contributes meaningfully)
+  if (outstandingInvoiceCount > 0 && sources.invoiceIncome > 0) {
+    const overdueInvoiceNote =
+      outstandingInvoiceCount === 1
+        ? `1 outstanding invoice (${formatAmount(sources.invoiceIncome)}) is included in the forecast.`
+        : `${outstandingInvoiceCount} outstanding invoices totalling ${formatAmount(sources.invoiceIncome)} are included.`;
+    insights.push({
+      title: "Outstanding invoice income included",
+      detail: overdueInvoiceNote + " Actual receipts depend on timely customer payment.",
+      severity: "INFO",
+    });
+  }
+
+  // 4. Recurring expense concentration
+  const totalExpenses = sources.recurringExpenses + sources.patternExpenses;
+  if (
+    totalExpenses > 0 &&
+    sources.recurringExpenses / totalExpenses > 0.7 &&
+    recurringTemplates.length > 0
+  ) {
+    const pct = Math.round((sources.recurringExpenses / totalExpenses) * 100);
+    const topExpense = recurringTemplates
+      .filter((t) => t.type === "EXPENSE")
+      .sort((a, b) => b.monthlyAmount - a.monthlyAmount)[0];
+    const detail = topExpense
+      ? `${pct}% of projected expenses are from named recurring commitments. Largest: ${topExpense.name} (${formatAmount(topExpense.monthlyAmount)}/month).`
+      : `${pct}% of projected expenses are from named recurring commitments.`;
+    insights.push({
+      title: "Expenses are primarily recurring",
+      detail,
+      severity: "INFO",
+    });
+  }
+
+  // 5. Low/insufficient confidence
+  if (confidence === "LOW") {
+    const txCount = historicalPattern?.transactionCount ?? 0;
+    insights.push({
+      title: "Limited historical data",
+      detail: `Forecast is based on ${txCount} transaction${txCount === 1 ? "" : "s"}. Add more activity to improve projection accuracy.`,
+      severity: "INFO",
+    });
+  }
+
+  // 6. Improving cash position (positive signal worth surfacing)
+  if (
+    !hasProjectedShortfall &&
+    projectedClosingBalance > openingBalance * 1.1 &&
+    confidence !== "LOW"
+  ) {
+    const pct = Math.round(((projectedClosingBalance - openingBalance) / openingBalance) * 100);
+    insights.push({
+      title: "Cash position improving",
+      detail: `Projected to grow ${pct}% over the next ${horizon} days based on current income and expense patterns.`,
+      severity: "INFO",
+    });
+  }
+
+  return insights;
+}
+
+function formatAmount(amount: number): string {
+  // Simple locale-agnostic formatting — the UI uses formatCurrency from lib/format.ts
+  // for display; this is just for embedding in insight strings.
+  const abs = Math.abs(amount);
+  if (abs >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `${(amount / 1_000).toFixed(0)}K`;
+  return amount.toFixed(0);
 }

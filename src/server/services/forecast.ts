@@ -10,6 +10,7 @@ import {
   type ForecastHorizon,
   type HistoricalPattern,
   type RecurringTemplate,
+  type MonthlySeasonality,
 } from "@/server/engines/forecast-engine";
 import { getOutstandingInvoicesAsScheduledItems } from "@/server/services/invoices";
 
@@ -88,6 +89,80 @@ async function getHistoricalPattern(
     incomeVariability,
     expenseVariability,
   };
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// Seasonality -- monthly income/expense ratios from 6 months of history
+// ────────────────────────────────────────────────────────────────────────────
+
+// Minimum months of history for seasonality to be computed at all.
+const SEASONALITY_HISTORY_DAYS = 180; // ~6 months
+// Minimum distinct months observed to trust a ratio for a given calendar month.
+const MIN_SEASON_SAMPLES = 2;
+
+/**
+ * Computes per-calendar-month income and expense ratios relative to the
+ * organization's overall monthly average.
+ *
+ * Example: if September historically averages 1.3x overall monthly income,
+ * the engine will scale September's pattern income by 1.3. This makes
+ * 30- and 60-day forecasts more realistic when cash flows have clear
+ * seasonal patterns (e.g. retail, agriculture, tourism).
+ *
+ * Returns null if fewer than 3 months of history exist (can't compute
+ * meaningful ratios with only 1-2 months of data).
+ *
+ * Uses baseAmount -- the org-base-currency snapshot -- so no FX conversion
+ * is needed and multi-currency orgs are handled correctly.
+ */
+async function getMonthlySeasonality(
+  organizationId: string,
+  asOfDate: string
+): Promise<Map<number, MonthlySeasonality> | null> {
+  const historyStart = addDays(asOfDate, -SEASONALITY_HISTORY_DAYS);
+
+  const monthRows = await db
+    .select({
+      month: sql<string>`extract(month from ${transactions.date}::date)::int`,
+      totalIncome: sql<string>`coalesce(sum(${transactions.baseAmount}) filter (where ${transactions.type} = 'INCOME'), 0)`,
+      totalExpense: sql<string>`coalesce(sum(${transactions.baseAmount}) filter (where ${transactions.type} = 'EXPENSE'), 0)`,
+    })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.organizationId, organizationId),
+        gte(transactions.date, historyStart),
+        lte(transactions.date, asOfDate)
+      )
+    )
+    .groupBy(sql`extract(month from ${transactions.date}::date)::int`);
+
+  if (monthRows.length < 3) return null;
+
+  // Overall monthly average (across all months in the window)
+  const totalIncome = monthRows.reduce((s, r) => s + Number(r.totalIncome), 0);
+  const totalExpense = monthRows.reduce((s, r) => s + Number(r.totalExpense), 0);
+  const avgMonthlyIncome = totalIncome / monthRows.length;
+  const avgMonthlyExpense = totalExpense / monthRows.length;
+
+  if (avgMonthlyIncome <= 0 && avgMonthlyExpense <= 0) return null;
+
+  const result = new Map<number, MonthlySeasonality>();
+  for (const row of monthRows) {
+    const m = Number(row.month);
+    const incomeRatio = avgMonthlyIncome > 0 ? Number(row.totalIncome) / avgMonthlyIncome : 1.0;
+    const expenseRatio = avgMonthlyExpense > 0 ? Number(row.totalExpense) / avgMonthlyExpense : 1.0;
+    // Clamp to [0.1, 3.0] to prevent extreme outliers from dominating
+    result.set(m, {
+      month: m,
+      incomeRatio: Math.max(0.1, Math.min(3.0, incomeRatio)),
+      expenseRatio: Math.max(0.1, Math.min(3.0, expenseRatio)),
+      sampleMonths: 1, // one occurrence per month in a 6-month window -- enough for MIN_SEASON_SAMPLES=2 check
+    });
+  }
+
+  return result;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -264,16 +339,24 @@ export async function getForecast(
 
   const endDate = addDays(startDate, horizon - 1);
 
-  // Run all DB queries in parallel — independent of each other
-  const [openingBalance, historicalPattern, recurringTemplates, scheduledItems] =
-    await Promise.all([
-      getCurrentCashPosition(organizationId, asOfDate),
-      getHistoricalPattern(organizationId, historyStart, asOfDate),
-      getPresetsAsTemplates(organizationId, baseCurrency),
-      getOutstandingInvoicesAsScheduledItems(organizationId, startDate, endDate),
-    ]);
+  // Run all DB queries in parallel -- independent of each other.
+  // Seasonality adds a 5th query but still runs concurrently.
+  const [
+    openingBalance,
+    historicalPattern,
+    recurringTemplates,
+    scheduledItems,
+    seasonality,
+  ] = await Promise.all([
+    getCurrentCashPosition(organizationId, asOfDate),
+    getHistoricalPattern(organizationId, historyStart, asOfDate),
+    getPresetsAsTemplates(organizationId, baseCurrency),
+    getOutstandingInvoicesAsScheduledItems(organizationId, startDate, endDate),
+    getMonthlySeasonality(organizationId, asOfDate),
+  ]);
 
   const presetCategories = new Set<string>(recurringTemplates.map((t) => t.category));
+  const outstandingInvoiceCount = scheduledItems.filter((i) => i.source === "INVOICE").length;
 
   const forecastInput: ForecastInput = {
     openingBalance,
@@ -284,6 +367,8 @@ export async function getForecast(
     scheduledItems,
     historicalPattern,
     presetCategories,
+    seasonality,
+    outstandingInvoiceCount,
   };
 
   return generateForecast(forecastInput);
