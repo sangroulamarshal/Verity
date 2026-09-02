@@ -27,8 +27,8 @@ export interface TransactionFormDefaults {
   customerId?: string;
 }
 
-  categories?: string[];
 interface TransactionFormProps {
+  categories?: string[];
   action: (
     state: TransactionFormState | undefined,
     formData: FormData

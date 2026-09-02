@@ -44,7 +44,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     timeAgo: new Intl.RelativeTimeFormat("en", { numeric: "auto" }).format(
       -Math.round((Date.now() - new Date(a.createdAt).getTime()) / 60000), "minute"
     ),
-    href: `/risk?transactionId=\`,
+    href: `/risk?transactionId=${a.transactionId}`,
   }));
 
   return (
