@@ -302,6 +302,7 @@ export function AppShell({
   role,
   displayCurrency,
   logoutAction,
+  notifications = [],
   children,
 }: AppShellProps) {
   const pathname = usePathname();

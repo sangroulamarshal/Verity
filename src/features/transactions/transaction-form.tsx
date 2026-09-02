@@ -29,6 +29,8 @@ export interface TransactionFormDefaults {
 
 interface TransactionFormProps {
   categories?: string[];
+  categories?: string[];
+  categories?: string[];
   action: (
     state: TransactionFormState | undefined,
     formData: FormData
@@ -51,6 +53,7 @@ export function TransactionForm({
   submitLabel,
   pendingLabel,
   onSuccess,
+  categories = [],
 }: TransactionFormProps) {
   const [state, formAction, pending] = useActionState(action, initialState);
 
@@ -157,7 +160,7 @@ export function TransactionForm({
         <CategoryPickerField
           name="category"
           defaultValue={state.values?.category ?? defaultValues?.category ?? ""}
-          categories={props.categories ?? []}
+          categories={categories}
         />
         {state.errors?.category && (
           <p className="text-xs text-destructive">{state.errors.category[0]}</p>

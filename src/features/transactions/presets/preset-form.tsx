@@ -23,6 +23,7 @@ export interface PresetFormDefaults {
 
 interface PresetFormProps {
   categories?: string[];
+  categories?: string[];
   action: (state: PresetFormState | undefined, formData: FormData) => Promise<PresetFormState>;
   defaultValues?: PresetFormDefaults;
   submitLabel: string;
@@ -38,6 +39,7 @@ export function PresetForm({
   submitLabel,
   pendingLabel,
   onSuccess,
+  categories = [],
 }: PresetFormProps) {
   const [state, formAction, pending] = useActionState(action, initialState);
 
@@ -80,7 +82,7 @@ export function PresetForm({
           <CategoryPickerField
             name="category"
             defaultValue={state.values?.category ?? defaultValues?.category ?? ""}
-            categories={props.categories ?? []}
+            categories={categories}
           />
           {state.errors?.category && (
             <p className="text-xs text-destructive">{state.errors.category[0]}</p>

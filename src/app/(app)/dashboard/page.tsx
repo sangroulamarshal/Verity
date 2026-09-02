@@ -80,6 +80,8 @@ function MetricCard({
 
 export default async function DashboardPage() {
   const session = await verifySession();
+  const canEdit = canWriteTransactions(session.role);
+  const categoryList = canEdit ? await listCategories(session.organizationId) : [];
 
   const [[org], summary] = await Promise.all([
     db.select({ name: organizations.name, baseCurrency: organizations.baseCurrency })
