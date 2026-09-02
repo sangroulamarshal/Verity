@@ -55,12 +55,12 @@ export function CashFlowChart({ data }: CashFlowChartProps) {
   }));
 
   return (
-    <div className="w-full" style={{ height: 200 }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartData} barCategoryGap="30%" barGap={3} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+    <div className="w-full">
+      <ResponsiveContainer width="100%" height={220}>
+        <BarChart data={chartData} barCategoryGap="30%" barGap={3} margin={{ top: 4, right: 4, left: 8, bottom: 0 }}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.07} />
           <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "currentColor", opacity: 0.5 }} dy={6} />
-          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "currentColor", opacity: 0.5 }} tickFormatter={formatK} width={36} />
+          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "currentColor", opacity: 0.5 }} tickFormatter={formatK} width={52} />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: "currentColor", fillOpacity: 0.04 }} />
           <Legend iconType="square" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 8, opacity: 0.6 }} />
           <Bar dataKey="Income" fill="#22c55e" radius={[3, 3, 0, 0]} maxBarSize={24} />

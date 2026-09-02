@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Reports" };
 
 export default function ReportsPage() {
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-6 py-6">
-      <div className="mb-5">
+    <div className="mx-auto w-full max-w-[1280px] px-6 py-4">
+      <div className="mb-4">
         <h1 className="text-[18px] font-semibold tracking-tight">Reports</h1>
         <p className="mt-0.5 text-[13px] text-muted-foreground">Generate and export financial reports.</p>
       </div>

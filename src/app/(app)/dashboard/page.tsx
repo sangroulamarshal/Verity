@@ -19,6 +19,9 @@ import { getRiskSummary } from "@/server/services/risk";
 import { getForecastSummary } from "@/server/services/forecast";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { TransactionDialog } from "@/features/transactions/transaction-dialog";
+import { listCategories } from "@/server/services/categories";
+import { canWriteTransactions } from "@/lib/permissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CashFlowChart } from "@/components/cash-flow-chart";
@@ -116,20 +119,22 @@ export default async function DashboardPage() {
   ].filter((s) => s.value > 0);
 
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-6 py-6">
+    <div className="mx-auto w-full max-w-[1280px] px-6 py-4">
       {/* Page header */}
-      <div className="mb-5 flex items-start justify-between gap-4">
+      <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-[18px] font-semibold tracking-tight">Overview</h1>
           <p className="mt-0.5 text-[13px] text-muted-foreground">
             Real-time overview of your financial activity and risk exposure.
           </p>
         </div>
-        <Button asChild size="sm">
-          <Link href="/transactions">
-            + Add Transaction
-          </Link>
-        </Button>
+        {canEdit && (
+          <TransactionDialog
+            mode="create"
+            categories={categoryList}
+            trigger={<Button size="sm">+ Add Transaction</Button>}
+          />
+        )}
       </div>
 
       {rateUnavailable && (
@@ -163,13 +168,13 @@ export default async function DashboardPage() {
           </div>
 
           {/* Two-column charts row */}
-          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+          <div className="mt-4 grid gap-3 lg:grid-cols-3">
             {/* Cash flow chart - 2/3 */}
             <Card className="lg:col-span-2">
               <CardHeader className="flex-row items-center justify-between pb-0">
                 <CardTitle>Cash Flow Trend</CardTitle>
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-muted-foreground">Last 7 days</span>
+                  <span className="text-[11px] text-muted-foreground">Last 6 months</span>
                   <button className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-elevated">
                     <MoreHorizontal className="size-4" />
                   </button>
@@ -204,7 +209,7 @@ export default async function DashboardPage() {
           </div>
 
           {/* Two-column tables row */}
-          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+          <div className="mt-4 grid gap-3 lg:grid-cols-3">
             {/* Recent transactions - 2/3 */}
             <Card className="lg:col-span-2">
               <CardHeader className="flex-row items-center justify-between">
@@ -312,7 +317,7 @@ export default async function DashboardPage() {
           {/* Forecast strip */}
           {forecastSummary && forecastSummary.confidence !== "INSUFFICIENT" && (
             <Card className="mt-4">
-              <CardContent className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:gap-10">
+              <CardContent className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:gap-10">
                 <div>
                   <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Current cash</p>
                   <p className="mt-0.5 text-[18px] font-semibold tabular-nums">

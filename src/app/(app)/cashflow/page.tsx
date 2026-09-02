@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { AlertTriangle, TrendingUp, TrendingDown, Info } from "lucide-react";
@@ -17,7 +17,7 @@ import type { ForecastHorizon } from "@/server/engines/forecast-engine";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Cash Flow",
+  title: "Cash Flow Forecast",
 };
 
 const VALID_HORIZONS: ForecastHorizon[] = [7, 30, 60, 90];
@@ -84,11 +84,11 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
   const delta = deltaLabel(openingDisplay, closingDisplay);
 
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-6 py-6">
+    <div className="mx-auto w-full max-w-[1280px] px-6 py-4">
       {/* Page header */}
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-[18px] font-semibold tracking-tight">Cash Flow</h1>
+          <h1 className="text-[18px] font-semibold tracking-tight">Cash Flow Forecast</h1>
           <p className="mt-0.5 text-[13px] text-muted-foreground">
             Based on recorded transactions, recurring commitments, and outstanding invoices.
             {rateUnavailable && (
@@ -271,7 +271,7 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
           )}
 
           {/* Two-column: Expected income + Expected expenses */}
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {/* Expected income */}
             <Card>
               <CardHeader>
@@ -290,7 +290,7 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
                       .map((item, idx) => (
                         <li
                           key={idx}
-                          className="flex items-center justify-between gap-4 border-b border-border/70 px-5 py-3 text-sm last:border-b-0"
+                          className="flex items-center justify-between gap-3 border-b border-border/70 px-5 py-3 text-sm last:border-b-0"
                         >
                           <div className="min-w-0">
                             <p className="truncate font-medium">{item.label}</p>
@@ -333,7 +333,7 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
                       .map((item, idx) => (
                         <li
                           key={idx}
-                          className="flex items-center justify-between gap-4 border-b border-border/70 px-5 py-3 text-sm last:border-b-0"
+                          className="flex items-center justify-between gap-3 border-b border-border/70 px-5 py-3 text-sm last:border-b-0"
                         >
                           <div className="min-w-0">
                             <p className="truncate font-medium">{item.label}</p>
@@ -362,23 +362,23 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
             </CardHeader>
             <CardContent className="p-0">
               <dl className="divide-y divide-border/70">
-                <div className="flex items-center justify-between gap-4 px-5 py-3 text-sm">
+                <div className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
                   <dt className="text-muted-foreground">Opening balance</dt>
                   <dd className="tabular-nums font-medium">{formatCurrency(openingDisplay, currency)}</dd>
                 </div>
-                <div className="flex items-center justify-between gap-4 px-5 py-3 text-sm">
+                <div className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
                   <dt className="text-muted-foreground">Expected income</dt>
                   <dd className="tabular-nums font-medium text-income">
                     +{formatCurrency(incomeDisplay, currency)}
                   </dd>
                 </div>
-                <div className="flex items-center justify-between gap-4 px-5 py-3 text-sm">
+                <div className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
                   <dt className="text-muted-foreground">Expected expenses</dt>
                   <dd className="tabular-nums font-medium text-expense">
                     -{formatCurrency(expenseDisplay, currency)}
                   </dd>
                 </div>
-                <div className="flex items-center justify-between gap-4 px-5 py-3 text-sm">
+                <div className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
                   <dt className="font-medium">Projected closing</dt>
                   <dd
                     className={cn(
@@ -389,13 +389,13 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
                     {formatCurrency(closingDisplay, currency)}
                   </dd>
                 </div>
-                <div className="flex items-center justify-between gap-4 px-5 py-3 text-sm">
+                <div className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
                   <dt className="text-muted-foreground">Expected range</dt>
                   <dd className="tabular-nums text-muted-foreground">
                     {formatCurrency(rangeLow, currency)} -- {formatCurrency(rangeHigh, currency)}
                   </dd>
                 </div>
-                <div className="flex items-center justify-between gap-4 px-5 py-3 text-sm">
+                <div className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
                   <dt className="text-muted-foreground">Projected minimum</dt>
                   <dd
                     className={cn(

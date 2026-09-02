@@ -1,9 +1,11 @@
-import { eq } from "drizzle-orm";
+﻿import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { organizations, users } from "@/db/schema";
 import { verifySession } from "@/server/services/session";
 import { logoutAction } from "@/features/auth/actions";
 import { AppShell } from "@/components/app-shell";
+import { getRecentAnomalies } from "@/server/services/risk";
+import type { NotificationItem } from "@/components/notifications-panel";
 import { ThemeSync } from "@/components/theme-sync";
 import { themeSchema, DEFAULT_THEME } from "@/features/settings/preferences/schema";
 
@@ -12,7 +14,7 @@ import { themeSchema, DEFAULT_THEME } from "@/features/settings/preferences/sche
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await verifySession();
 
-  const [[org], [user]] = await Promise.all([
+  const [[org], [user], anomalies] = await Promise.all([
     db
       .select({ name: organizations.name, baseCurrency: organizations.baseCurrency })
       .from(organizations)
@@ -26,7 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ]);
 
   // users.preferences is a loosely-typed jsonb blob (see PreferenceBag in
-  // server/services/account.ts) — validated here rather than trusted,
+  // server/services/account.ts) â€” validated here rather than trusted,
   // same reasoning as every other stored-JSON read in this codebase.
   const parsedTheme = themeSchema.safeParse(
     user?.preferences && typeof user.preferences === "object"
@@ -34,6 +36,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       : undefined
   );
   const theme = parsedTheme.success ? parsedTheme.data : DEFAULT_THEME;
+
+  const notifications: NotificationItem[] = anomalies.map((a) => ({
+    id: a.transactionId,
+    title: `\ risk alert`,
+    body: a.topSignal ?? `Transaction flagged with score \`,
+    timeAgo: new Intl.RelativeTimeFormat("en", { numeric: "auto" }).format(
+      -Math.round((Date.now() - new Date(a.createdAt).getTime()) / 60000), "minute"
+    ),
+    href: `/risk?transactionId=\`,
+  }));
 
   return (
     <>
@@ -45,6 +57,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         role={session.role}
         displayCurrency={session.displayCurrency ?? org?.baseCurrency ?? "GBP"}
         logoutAction={logoutAction}
+        notifications={notifications}
       >
         {children}
       </AppShell>

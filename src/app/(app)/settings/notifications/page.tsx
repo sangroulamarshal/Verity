@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { verifySession } from "@/server/services/session";
 import { getUserById } from "@/server/services/account";
 import { NotificationsForm } from "@/features/settings/notifications/notifications-form";

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { MoreHorizontal } from "lucide-react";
 import { verifySession } from "@/server/services/session";
@@ -34,9 +34,9 @@ export default async function CustomersPage(props: PageProps<"/customers">) {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-6 py-6">
+    <div className="mx-auto w-full max-w-[1280px] px-6 py-4">
       {/* Header */}
-      <div className="mb-5 flex items-start justify-between gap-4">
+      <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-[18px] font-semibold tracking-tight">Customers</h1>
           <p className="mt-0.5 text-[13px] text-muted-foreground">

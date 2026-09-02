@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { Upload, FileText, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { verifySession } from "@/server/services/session";
 import { listImports } from "@/server/services/imports";
@@ -19,9 +19,9 @@ export default async function ImportsPage() {
   const totalFailed = history.reduce((s, r) => s + (r.rowCount - r.insertedRowCount - r.duplicateRowCount - r.invalidRowCount), 0);
 
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-6 py-6">
+    <div className="mx-auto w-full max-w-[1280px] px-6 py-4">
       {/* Header */}
-      <div className="mb-5 flex items-start justify-between gap-4">
+      <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-[18px] font-semibold tracking-tight">Imports</h1>
           <p className="mt-0.5 text-[13px] text-muted-foreground">

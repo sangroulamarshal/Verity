@@ -1,11 +1,10 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { ClipboardList } from "lucide-react";
 import { verifySession } from "@/server/services/session";
 import { listAuditLog, type AuditAction } from "@/server/services/audit-log";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { TransactionTabs } from "@/features/transactions/transaction-tabs";
 import { AuditLogFilters } from "@/features/transactions/audit-log/audit-log-filters";
 
 export const metadata: Metadata = { title: "Audit Log" };
@@ -55,9 +54,9 @@ export default async function AuditLogPage(props: PageProps<"/transactions/audit
   });
 
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-6 py-6">
+    <div className="mx-auto w-full max-w-[1280px] px-6 py-4">
       {/* Header */}
-      <div className="mb-5 flex items-start justify-between gap-4">
+      <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-[18px] font-semibold tracking-tight">Audit Log</h1>
           <p className="mt-0.5 text-[13px] text-muted-foreground">
@@ -66,9 +65,7 @@ export default async function AuditLogPage(props: PageProps<"/transactions/audit
         </div>
       </div>
 
-      <div className="rounded-[6px] border border-border bg-surface overflow-hidden">
-        <TransactionTabs />
-        <AuditLogFilters />
+      <div className="rounded-[6px] border border-border bg-surface overflow-hidden">        <AuditLogFilters />
 
         {/* Dense table */}
         <div className="overflow-x-auto">

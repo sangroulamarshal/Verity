@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, type ReactNode } from "react";
 import {
@@ -13,13 +13,14 @@ import { createPresetAction, updatePresetAction } from "./actions";
 import { PresetForm, type PresetFormDefaults } from "./preset-form";
 
 interface PresetDialogProps {
+  categories?: string[];
   mode: "create" | "edit";
   presetId?: string;
   defaultValues?: PresetFormDefaults;
   trigger: ReactNode;
 }
 
-export function PresetDialog({ mode, presetId, defaultValues, trigger }: PresetDialogProps) {
+export function PresetDialog({ mode, presetId, defaultValues, categories, trigger }: PresetDialogProps) {
   const [open, setOpen] = useState(false);
 
   const action =
@@ -37,12 +38,12 @@ export function PresetDialog({ mode, presetId, defaultValues, trigger }: PresetD
               : "Create a reusable template for a recurring transaction."}
           </DialogDescription>
         </DialogHeader>
-        <PresetForm
+        <PresetForm categories={categories}
           key={open ? "open" : "closed"}
           action={action}
           defaultValues={defaultValues}
           submitLabel={mode === "edit" ? "Save changes" : "Create preset"}
-          pendingLabel={mode === "edit" ? "Saving…" : "Creating…"}
+          pendingLabel={mode === "edit" ? "Savingâ€¦" : "Creatingâ€¦"}
           onSuccess={() => setOpen(false)}
         />
       </DialogContent>

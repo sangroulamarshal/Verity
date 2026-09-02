@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { verifySession } from "@/server/services/session";
@@ -52,7 +52,7 @@ export default async function CustomerDetailPage(props: PageProps<"/customers/[i
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-8 md:px-10">
-      <div className="mb-6 flex items-start justify-between gap-4">
+      <div className="mb-6 flex items-start justify-between gap-3">
         <div>
           <Link href="/customers" className="text-sm text-muted-foreground hover:underline">
             &larr; Customers
@@ -77,7 +77,7 @@ export default async function CustomerDetailPage(props: PageProps<"/customers/[i
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">Contact</CardTitle>

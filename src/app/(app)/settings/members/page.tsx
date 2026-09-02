@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { verifySession } from "@/server/services/session";
 import { listMembers, listPendingInvites } from "@/server/services/members";

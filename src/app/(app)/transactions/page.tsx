@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { verifySession } from "@/server/services/session";
 import { listTransactions } from "@/server/services/transactions";
+import { listCategories } from "@/server/services/categories";
 import { getOrganization } from "@/server/services/organizations";
 import { getUserById } from "@/server/services/account";
 import { preferencesSchema, DEFAULT_PREFERENCES } from "@/features/settings/preferences/schema";
@@ -33,9 +34,10 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
   const page = Math.max(1, Number(firstParam(searchParams.page)) || 1);
   const type = firstParam(searchParams.type);
 
-  const [user, organization] = await Promise.all([
+  const [user, organization, categoryList] = await Promise.all([
     getUserById(session.userId),
     getOrganization(session.organizationId),
+    listCategories(session.organizationId),
   ]);
   const parsedPrefs = preferencesSchema.safeParse(user?.preferences ?? {});
   const preferences = parsedPrefs.success ? parsedPrefs.data : DEFAULT_PREFERENCES;
@@ -62,9 +64,9 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
   const rowsWithDisplay = await withDisplayAmounts(rows, displayCurrency);
 
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-6 py-6">
+    <div className="mx-auto w-full max-w-[1280px] px-6 py-4">
       {/* Header */}
-      <div className="mb-5 flex items-start justify-between gap-4">
+      <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-[18px] font-semibold tracking-tight">All Transactions</h1>
           <p className="mt-0.5 text-[13px] text-muted-foreground">
@@ -74,7 +76,7 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm">Export</Button>
           {canEdit && (
-            <TransactionDialog mode="create" trigger={<Button size="sm">+ Add Transaction</Button>} />
+            <TransactionDialog mode="create" categories={categoryList} trigger={<Button size="sm">+ Add Transaction</Button>} />
           )}
         </div>
       </div>
@@ -152,6 +154,7 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
                           <div className="flex items-center justify-end gap-1">
                             <TransactionDialog
                               mode="edit"
+                              categories={categoryList}
                               transactionId={t.id}
                               defaultValues={{
                                 date: t.date, amount: String(t.amount),

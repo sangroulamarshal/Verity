@@ -1,10 +1,9 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { LayoutList } from "lucide-react";
 import { verifySession } from "@/server/services/session";
 import { listPresets } from "@/server/services/transaction-presets";
 import { canWriteTransactions } from "@/lib/permissions";
 import { Badge } from "@/components/ui/badge";
-import { TransactionTabs } from "@/features/transactions/transaction-tabs";
 import { PresetDialog } from "@/features/transactions/presets/preset-dialog";
 import { DeletePresetButton } from "@/features/transactions/presets/delete-preset-button";
 import { TransactionDialog } from "@/features/transactions/transaction-dialog";
@@ -19,9 +18,9 @@ export default async function PresetsPage() {
   const presets = await listPresets(session.organizationId);
 
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-6 py-6">
+    <div className="mx-auto w-full max-w-[1280px] px-6 py-4">
       {/* Header */}
-      <div className="mb-5 flex items-start justify-between gap-4">
+      <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-[18px] font-semibold tracking-tight">Transaction Presets</h1>
           <p className="mt-0.5 text-[13px] text-muted-foreground">
@@ -33,9 +32,7 @@ export default async function PresetsPage() {
         )}
       </div>
 
-      <div className="rounded-[6px] border border-border bg-surface overflow-hidden">
-        <TransactionTabs />
-        <div className="overflow-x-auto">
+      <div className="rounded-[6px] border border-border bg-surface overflow-hidden">        <div className="overflow-x-auto">
           <table className="w-full text-[13px] border-collapse">
             <thead className="border-b border-border bg-elevated/20">
               <tr>

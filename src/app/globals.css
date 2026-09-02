@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -41,6 +41,8 @@
   --sidebar:            #f8fafc;
   --sidebar-foreground: #0f172a;
   --sidebar-border:     #e2e8f0;
+  --sidebar-active:            #1e40af;
+  --sidebar-active-foreground: #ffffff;
 
   --popover:            #ffffff;
   --popover-foreground: #0f172a;
@@ -91,6 +93,8 @@
   --sidebar:            #0a0a0a;
   --sidebar-foreground: #fafafa;
   --sidebar-border:     #1a1a1a;
+  --sidebar-active:            #60a5fa;
+  --sidebar-active-foreground: #050505;
 
   --popover:            #111111;
   --popover-foreground: #fafafa;
@@ -137,6 +141,8 @@
   --color-sidebar:             var(--sidebar);
   --color-sidebar-foreground:  var(--sidebar-foreground);
   --color-sidebar-border:      var(--sidebar-border);
+  --color-sidebar-active:            var(--sidebar-active);
+  --color-sidebar-active-foreground: var(--sidebar-active-foreground);
   --color-popover:             var(--popover);
   --color-popover-foreground:  var(--popover-foreground);
   --color-primary:             var(--primary);

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, type ReactNode } from "react";
 import {
@@ -13,6 +13,7 @@ import { createTransactionAction, updateTransactionAction } from "./actions";
 import { TransactionForm, type TransactionFormDefaults } from "./transaction-form";
 
 interface TransactionDialogProps {
+  categories?: string[];
   mode: "create" | "edit";
   transactionId?: string;
   defaultValues?: TransactionFormDefaults;
@@ -23,6 +24,7 @@ export function TransactionDialog({
   mode,
   transactionId,
   defaultValues,
+  categories,
   trigger,
 }: TransactionDialogProps) {
   const [open, setOpen] = useState(false);
@@ -46,12 +48,12 @@ export function TransactionDialog({
         </DialogHeader>
         {/* Remounting on open/close discards any in-progress edits and
             clears stale validation errors from a previous open. */}
-        <TransactionForm
+        <TransactionForm categories={categories}
           key={open ? "open" : "closed"}
           action={action}
           defaultValues={defaultValues}
           submitLabel={mode === "edit" ? "Save changes" : "Add transaction"}
-          pendingLabel={mode === "edit" ? "Saving…" : "Adding…"}
+          pendingLabel={mode === "edit" ? "Savingâ€¦" : "Addingâ€¦"}
           onSuccess={() => setOpen(false)}
         />
       </DialogContent>

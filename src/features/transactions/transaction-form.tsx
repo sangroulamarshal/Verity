@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useActionState, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { PAYMENT_METHOD_LABELS, PAYMENT_METHODS } from "./schema";
 import { ExchangeRatePreview } from "./exchange-rate-preview";
 import { CustomerPicker } from "./customer-picker";
 import type { TransactionFormState } from "./actions";
+import { CategoryPickerField } from "./category-picker";
 
 export interface TransactionFormDefaults {
   date?: string;
@@ -26,6 +27,7 @@ export interface TransactionFormDefaults {
   customerId?: string;
 }
 
+  categories?: string[];
 interface TransactionFormProps {
   action: (
     state: TransactionFormState | undefined,
@@ -61,7 +63,7 @@ export function TransactionForm({
     if (state.success) {
       onSuccess?.();
     }
-    // Only re-run when the action reports a fresh success — including
+    // Only re-run when the action reports a fresh success â€” including
     // `onSuccess` itself would re-fire this on every parent re-render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.success]);
@@ -152,12 +154,10 @@ export function TransactionForm({
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="category">Category</Label>
-        <Input
-          id="category"
+        <CategoryPickerField
           name="category"
-          defaultValue={state.values?.category ?? defaultValues?.category}
-          required
-          aria-invalid={!!state.errors?.category}
+          defaultValue={state.values?.category ?? defaultValues?.category ?? ""}
+          categories={props.categories ?? []}
         />
         {state.errors?.category && (
           <p className="text-xs text-destructive">{state.errors.category[0]}</p>

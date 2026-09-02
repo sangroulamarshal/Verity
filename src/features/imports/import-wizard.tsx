@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import {
@@ -27,6 +27,8 @@ import { analyzeImportAction, commitImportAction, type AnalyzeImportResult } fro
 type Step = "upload" | "map" | "done";
 
 const CURRENCIES = ["GBP", "USD", "EUR", "NPR", "INR", "AUD", "CAD"];
+
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 function toMappingEntries(byTarget: Partial<Record<ImportTargetField, string>>): ColumnMappingEntry[] {
   return IMPORT_TARGET_FIELDS.filter((field) => byTarget[field]).map((field) => ({
@@ -79,70 +81,82 @@ export function ImportWizard() {
   }
 
   async function handleUpload() {
-    const formData = buildFormData(false);
-    if (!formData) {
+    if (!file) {
       setError("Choose a file first.");
       return;
     }
-    setPending(true);
-    setError(null);
-
-    const analyzed = await analyzeImportAction(formData);
-    setPending(false);
-
-    if (analyzed.error) {
-      setError(analyzed.error);
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setError("File is too large. The maximum size is 5 MB.");
       return;
     }
-
-    setHeaders(analyzed.headers ?? []);
-    const initialMapping: Partial<Record<ImportTargetField, string>> = {};
-    for (const entry of analyzed.suggestedMapping ?? []) {
-      initialMapping[entry.targetField] = entry.sourceColumn;
+    const formData = buildFormData(false);
+    if (!formData) return;
+    setPending(true);
+    setError(null);
+    try {
+      const analyzed = await analyzeImportAction(formData);
+      if (analyzed.error) {
+        setError(analyzed.error);
+        return;
+      }
+      setHeaders(analyzed.headers ?? []);
+      const initialMapping: Partial<Record<ImportTargetField, string>> = {};
+      for (const entry of analyzed.suggestedMapping ?? []) {
+        initialMapping[entry.targetField] = entry.sourceColumn;
+      }
+      setMappingByTarget(initialMapping);
+      setStep("map");
+    } catch {
+      setError("Something went wrong reading the file. Please try again.");
+    } finally {
+      setPending(false);
     }
-    setMappingByTarget(initialMapping);
-    setStep("map");
   }
 
   async function handlePreview() {
     if (localMappingErrors.length > 0) return;
     const formData = buildFormData(true);
     if (!formData) return;
-
     setPending(true);
     setError(null);
-    const analyzed = await analyzeImportAction(formData);
-    setPending(false);
-
-    if (analyzed.error) {
-      setError(analyzed.error);
-      setPreview(null);
-      return;
+    try {
+      const analyzed = await analyzeImportAction(formData);
+      if (analyzed.error) {
+        setError(analyzed.error);
+        setPreview(null);
+        return;
+      }
+      setPreview(analyzed);
+    } catch {
+      setError("Something went wrong checking the file. Please try again.");
+    } finally {
+      setPending(false);
     }
-    setPreview(analyzed);
   }
 
   async function handleConfirm() {
     const formData = buildFormData(true);
     if (!formData || !preview) return;
     formData.set("includeDuplicates", includeDuplicates ? "true" : "false");
-
     setPending(true);
     setError(null);
-    const committed = await commitImportAction(formData);
-    setPending(false);
-
-    if (committed.error) {
-      setError(committed.error);
-      return;
+    try {
+      const committed = await commitImportAction(formData);
+      if (committed.error) {
+        setError(committed.error);
+        return;
+      }
+      setResult({
+        insertedCount: committed.insertedCount ?? 0,
+        invalidCount: committed.invalidCount ?? 0,
+        duplicateCount: committed.duplicateCount ?? 0,
+      });
+      setStep("done");
+    } catch {
+      setError("Something went wrong during import. Please try again.");
+    } finally {
+      setPending(false);
     }
-
-    setResult({
-      insertedCount: committed.insertedCount ?? 0,
-      invalidCount: committed.invalidCount ?? 0,
-      duplicateCount: committed.duplicateCount ?? 0,
-    });
-    setStep("done");
   }
 
   return (

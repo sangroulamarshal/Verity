@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+
 
 import * as React from "react";
 import Link from "next/link";
@@ -16,7 +17,7 @@ import {
   ClipboardList,
   ShieldAlert,
   TrendingUp,
-  BarChart2,
+
   Lightbulb,
   BarChart,
   Settings as SettingsIcon,
@@ -24,11 +25,14 @@ import {
   X,
   ChevronDown,
   Search,
-  Bell,
+
   HelpCircle,
+  Tag,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { SearchModal } from "@/components/search-modal";
+import { NotificationsPanel, type NotificationItem } from "@/components/notifications-panel";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { CurrencySelector } from "@/components/currency-selector";
 import { UserMenu } from "@/components/user-menu";
@@ -66,7 +70,6 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Transactions",
     collapsible: true,
     items: [
-      { href: "/transactions", label: "Overview", icon: LayoutDashboard },
       { href: "/transactions/all", label: "All Transactions", icon: LayoutList },
       { href: "/transactions/income", label: "Income", icon: ArrowUp },
       { href: "/transactions/expenses", label: "Expenses", icon: ArrowDown },
@@ -80,8 +83,8 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Intelligence",
     items: [
       { href: "/risk", label: "Risk", icon: ShieldAlert },
-      { href: "/cashflow", label: "Cash Flow", icon: TrendingUp },
-      { href: "/cashflow/forecast", label: "Forecast", icon: BarChart2 },
+      { href: "/cashflow", label: "Cash Flow Forecast", icon: TrendingUp },
+      { href: "/transactions/categories", label: "Categories", icon: Tag },
       { href: "/insights", label: "Insights", icon: Lightbulb },
     ],
   },
@@ -109,11 +112,11 @@ const LIVE_ROUTES = new Set([
   "/transactions/expenses",
   "/transactions/presets",
   "/transactions/audit-log",
+  "/transactions/categories",
   "/transactions/reconciliation",
   "/imports",
   "/risk",
   "/cashflow",
-  "/cashflow/forecast",
   "/insights",
   "/reports",
   "/settings",
@@ -135,7 +138,6 @@ function routeIsLive(href: string): boolean {
 
 function isActive(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === href;
-  if (href === "/transactions") return pathname === "/transactions";
   return pathname === href || pathname.startsWith(href + "/");
 }
 
@@ -283,6 +285,7 @@ function SidebarSearch() {
 }
 
 interface AppShellProps {
+  notifications?: NotificationItem[];
   orgName: string;
   email: string;
   fullName: string | null;
@@ -303,11 +306,23 @@ export function AppShell({
 }: AppShellProps) {
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
+  const [searchOpen, setSearchOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const sidebarContent = (onNavigate?: () => void) => (
     <>
       <WorkspaceBox orgName={orgName} />
-      <SidebarSearch />
+      <div onClick={() => setSearchOpen(true)} className="cursor-pointer"><SidebarSearch /></div>
       <div className="flex-1 overflow-y-auto scrollbar-thin mt-1">
         {NAV_GROUPS.map((group, i) => (
           <SidebarNavGroup
@@ -384,9 +399,10 @@ export function AppShell({
             <Menu className="size-4" />
           </button>
 
-          {/* Search */}
+          <SearchModal />{/* Search */}
           <div className="hidden flex-1 sm:flex sm:max-w-[480px]">
-            <div className="flex w-full items-center gap-2 rounded-md border border-border bg-elevated/40 px-3 py-1.5 text-[13px] text-muted-foreground hover:bg-elevated/60 cursor-text transition-colors">
+            <div onClick={() => setSearchOpen(true)}
+              className="flex w-full items-center gap-2 rounded-md border border-border bg-elevated/40 px-3 py-1.5 text-[13px] text-muted-foreground hover:bg-elevated/60 cursor-text transition-colors">
               <Search className="size-3.5 shrink-0 text-muted-foreground/40" />
               <span className="flex-1 text-[12px] text-muted-foreground/40">
                 Search transactions, customers, invoices...
@@ -400,20 +416,7 @@ export function AppShell({
           <div className="flex-1" />
 
           <div className="flex items-center gap-1">
-            {/* Notifications */}
-            <button
-              type="button"
-              aria-label="Notifications (3 unread)"
-              className="relative flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-elevated hover:text-foreground transition-colors"
-            >
-              <Bell className="size-4" />
-              <span
-                className="absolute right-1 top-1 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground leading-none"
-                aria-hidden
-              >
-                3
-              </span>
-            </button>
+            <NotificationsPanel notifications={notifications} />
 
             <div className="mx-1 h-5 w-px bg-border" />
             <CurrencySelector value={displayCurrency} />
@@ -422,7 +425,6 @@ export function AppShell({
             <UserMenu email={email} fullName={fullName} role={role} logoutAction={logoutAction} />
           </div>
         </header>
-
         <main className="flex-1 overflow-y-auto scrollbar-thin bg-background">
           {children}
         </main>
@@ -430,3 +432,5 @@ export function AppShell({
     </div>
   );
 }
+
+

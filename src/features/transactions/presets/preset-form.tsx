@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useActionState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ export interface PresetFormDefaults {
   description?: string;
 }
 
+  categories?: string[];
 interface PresetFormProps {
   action: (state: PresetFormState | undefined, formData: FormData) => Promise<PresetFormState>;
   defaultValues?: PresetFormDefaults;
@@ -76,12 +77,10 @@ export function PresetForm({
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="category">Category</Label>
-          <Input
-            id="category"
+          <CategoryPickerField
             name="category"
-            defaultValue={state.values?.category ?? defaultValues?.category}
-            required
-            aria-invalid={!!state.errors?.category}
+            defaultValue={state.values?.category ?? defaultValues?.category ?? ""}
+            categories={props.categories ?? []}
           />
           {state.errors?.category && (
             <p className="text-xs text-destructive">{state.errors.category[0]}</p>

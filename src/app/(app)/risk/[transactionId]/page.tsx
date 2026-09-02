@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { verifySession } from "@/server/services/session";
@@ -35,7 +35,7 @@ export default async function RiskDetailPage(props: PageProps<"/risk/[transactio
       </Button>
 
       <Card>
-        <CardHeader className="flex-row items-start justify-between gap-4">
+        <CardHeader className="flex-row items-start justify-between gap-3">
           <div>
             <CardTitle>{transaction.description || transaction.category}</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -105,7 +105,7 @@ export default async function RiskDetailPage(props: PageProps<"/risk/[transactio
               {history.map((entry) => (
                 <li
                   key={entry.id}
-                  className="flex items-center justify-between gap-4 border-b border-border/70 px-5 py-3 text-sm last:border-b-0"
+                  className="flex items-center justify-between gap-3 border-b border-border/70 px-5 py-3 text-sm last:border-b-0"
                 >
                   <div>
                     <p>{formatDate(entry.createdAt.toISOString())}</p>

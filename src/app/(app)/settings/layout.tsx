@@ -1,11 +1,11 @@
-import { verifySession } from "@/server/services/session";
+﻿import { verifySession } from "@/server/services/session";
 import { SettingsNav } from "@/components/settings-nav";
 
 export default async function SettingsLayout({ children }: { children: React.ReactNode }) {
   const session = await verifySession();
 
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-6 py-6">
+    <div className="mx-auto w-full max-w-[1280px] px-6 py-4">
       {/* Page header */}
       <div className="mb-6">
         <h1 className="text-[18px] font-semibold tracking-tight">Settings</h1>

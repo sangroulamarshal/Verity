@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { ShieldAlert, ShieldCheck, MoreHorizontal, Search } from "lucide-react";
 import { verifySession } from "@/server/services/session";
@@ -70,9 +70,9 @@ export default async function RiskPage(props: PageProps<"/risk">) {
   ].filter((s) => s.value > 0);
 
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-6 py-6">
+    <div className="mx-auto w-full max-w-[1280px] px-6 py-4">
       {/* Header */}
-      <div className="mb-5 flex items-start justify-between gap-4">
+      <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-[18px] font-semibold tracking-tight">Risk</h1>
           <p className="mt-0.5 text-[13px] text-muted-foreground">
@@ -139,8 +139,8 @@ export default async function RiskPage(props: PageProps<"/risk">) {
           </div>
 
           {/* Two-column: donut chart + recent alerts */}
-          <div className="mt-4 grid gap-4 lg:grid-cols-3">
-            {/* Risk Breakdown donut — replaces placeholder trend chart */}
+          <div className="mt-4 grid gap-3 lg:grid-cols-3">
+            {/* Risk Breakdown donut â€” replaces placeholder trend chart */}
             <Card className="lg:col-span-2">
               <CardHeader className="flex-row items-center justify-between pb-0">
                 <CardTitle>Risk Breakdown</CardTitle>

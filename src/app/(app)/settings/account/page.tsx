@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { verifySession } from "@/server/services/session";
 import { getUserById } from "@/server/services/account";
 import { getOrganization } from "@/server/services/organizations";
@@ -25,7 +25,7 @@ export default async function AccountSettingsPage() {
         </div>
         <div className="px-5 py-4">
           {/* Avatar + role badge row */}
-          <div className="mb-5 flex items-center gap-4">
+          <div className="mb-4 flex items-center gap-3">
             <Avatar
               name={user?.fullName}
               email={session.email}
