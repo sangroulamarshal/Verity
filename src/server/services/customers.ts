@@ -1,4 +1,4 @@
-﻿import "server-only";
+import "server-only";
 import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { customers, transactions } from "@/db/schema";
@@ -17,6 +17,8 @@ export interface ListCustomersOptions {
   pageSize?: number;
   /** Matches name, email, or phone. */
   search?: string;
+  sortBy?: "name" | "updatedAt";
+  sortDir?: "asc" | "desc";
 }
 
 export interface ListCustomersResult {
