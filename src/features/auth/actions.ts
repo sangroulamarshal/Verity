@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { redirect } from "next/navigation";
 import { eq, and, isNull } from "drizzle-orm";
@@ -193,7 +193,7 @@ export async function loginAction(
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    await auditLogSafely({ action: "LOGIN_FAILED", metadata: { email } });
+    await auditLogSafely({ action: "LOGIN_FAILED" });
 
     // Not a sensitive detail to surface (unlike "this email doesn't
     // exist") — the person already knows they just registered this

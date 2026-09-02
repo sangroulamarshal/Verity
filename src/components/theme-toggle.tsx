@@ -1,9 +1,7 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
-import { Moon, Sun, Monitor, ChevronDown } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
+import { Moon, Sun, Monitor } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,32 +11,20 @@ import {
 import { useAccountTheme } from "@/components/use-account-theme";
 
 export function ThemeToggle() {
-  // setTheme here also persists to the account (see use-account-theme.ts)
-  // — previously this only ever called next-themes' own setTheme(),
-  // which is why the theme reverted whenever local storage/cache was
-  // cleared or on a different browser: it was never actually saved.
   const { setTheme } = useAccountTheme();
-  // No JS "mounted" state needed: the server and client render identical
-  // markup, and the icon swap is driven purely by the `.dark` class that
-  // next-themes puts on <html> (see globals.css `@custom-variant dark`).
-  // That's what avoids both the hydration mismatch and the
-  // setState-in-effect anti-pattern the old version had.
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
+        <button
+          type="button"
           aria-label="Toggle theme"
-          className="gap-1 px-2.5"
+          className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-elevated hover:text-foreground transition-colors"
         >
-          <span className="relative size-4">
-            <Sun className="absolute inset-0 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
-            <Moon className="absolute inset-0 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
-          </span>
-          <ChevronDown className="size-3.5 text-muted-foreground" />
-        </Button>
+          <Sun className="size-4 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90 absolute" />
+          <Moon className="size-4 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0 absolute" />
+          <span className="sr-only">Toggle theme</span>
+        </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => setTheme("light")}>

@@ -58,11 +58,16 @@ export function ForecastChart({ days, openingBalance, historicalDays = [] }: For
 
   const allBalances = [...historicalDays.map((h) => h.balance), openingBalance, ...days.map((d) => d.projectedBalance)];
   const hasNegative = Math.min(...allBalances) < 0;
+  const minBal = Math.min(...allBalances);
+  const maxBal = Math.max(...allBalances);
+  const padding = Math.max((maxBal - minBal) * 0.1, maxBal * 0.02);
+  const yMin = hasNegative ? minBal - padding : Math.max(0, minBal - padding);
+  const yMax = maxBal + padding;
 
   return (
     <div className="w-full" style={{ height: 220 }}>
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={allData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <AreaChart data={allData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
           <defs>
             <linearGradient id="gradActual" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#6b7280" stopOpacity={0.15} />
@@ -75,7 +80,7 @@ export function ForecastChart({ days, openingBalance, historicalDays = [] }: For
           </defs>
           <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.07} />
           <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "currentColor", opacity: 0.5 }} tickFormatter={tickFormatter} interval={0} dy={6} />
-          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "currentColor", opacity: 0.5 }} tickFormatter={formatK} width={40} />
+          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "currentColor", opacity: 0.5 }} tickFormatter={formatK} width={56} domain={[yMin, yMax]} />
           <Tooltip content={<CustomTooltip />} cursor={{ stroke: "currentColor", strokeOpacity: 0.15, strokeWidth: 1 }} />
           {hasNegative && <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="4 3" strokeOpacity={0.5} strokeWidth={1} />}
           {historicalDays.length > 0 && (

@@ -86,7 +86,7 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
   const delta = deltaLabel(openingDisplay, closingDisplay);
 
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-6 py-4">
+    <div className="w-full px-4 py-4 sm:px-6">
       {/* Page header */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>

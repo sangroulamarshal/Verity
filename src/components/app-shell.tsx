@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 
 import * as React from "react";
@@ -77,6 +77,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/imports", label: "Imports", icon: Upload },
       { href: "/transactions/reconciliation", label: "Reconciliation", icon: GitMerge },
       { href: "/transactions/audit-log", label: "Audit Log", icon: ClipboardList },
+      { href: "/transactions/categories", label: "Categories", icon: Tag },
     ],
   },
   {
@@ -84,7 +85,6 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/risk", label: "Risk", icon: ShieldAlert },
       { href: "/cashflow", label: "Cash Flow Forecast", icon: TrendingUp },
-      { href: "/transactions/categories", label: "Categories", icon: Tag },
       { href: "/insights", label: "Insights", icon: Lightbulb },
     ],
   },
@@ -402,7 +402,7 @@ export function AppShell({
 
           <SearchModal />{/* Search */}
           <div className="hidden flex-1 sm:flex sm:max-w-[480px]">
-            <div onClick={() => setSearchOpen(true)}
+            <div onClick={() => { const e = new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true }); document.dispatchEvent(e); }}
               className="flex w-full items-center gap-2 rounded-md border border-border bg-elevated/40 px-3 py-1.5 text-[13px] text-muted-foreground hover:bg-elevated/60 cursor-text transition-colors">
               <Search className="size-3.5 shrink-0 text-muted-foreground/40" />
               <span className="flex-1 text-[12px] text-muted-foreground/40">

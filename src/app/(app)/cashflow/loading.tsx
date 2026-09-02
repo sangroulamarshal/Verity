@@ -1,9 +1,9 @@
-import { Skeleton } from "@/components/ui/skeleton";
+﻿import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 export default function CashFlowLoading() {
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-8">
+    <div className="w-full px-4 py-4 sm:px-6">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Skeleton className="h-6 w-28" />

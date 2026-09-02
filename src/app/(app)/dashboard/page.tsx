@@ -8,7 +8,6 @@ import {
   FileText,
   TrendingUp,
   ShieldAlert,
-  MoreHorizontal,
 } from "lucide-react";
 import { db } from "@/db/client";
 import { organizations } from "@/db/schema";
@@ -42,10 +41,22 @@ function Delta({ value, inverse = false }: { value: number | null; inverse?: boo
   return (
     <span className={cn("inline-flex items-center gap-0.5 text-[12px] font-medium", positive ? "text-income" : "text-expense")}>
       <Icon className="size-3.5" />
-      {Math.abs(value).toFixed(1)}% from last 7 days
-    </span>
-  );
-}
+                <div className="flex items-center gap-1">
+                  {[1, 3, 6].map((p) => (
+                    <Link
+                      key={p}
+                      href={`?chartPeriod=${p}`}
+                      className={cn(
+                        "rounded px-2 py-0.5 text-[11px] font-medium transition-colors",
+                        period === p
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-elevated"
+                      )}
+                    >
+                      {p}M
+                    </Link>
+                  ))}
+                </div>
 
 function MetricCard({
   label,
@@ -78,9 +89,13 @@ function MetricCard({
   );
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage(props: { searchParams: Promise<Record<string, string>> }) {
   const session = await verifySession();
+  const searchParams = await props.searchParams;
   const canEdit = canWriteTransactions(session.role);
+  const chartPeriod = Number(searchParams.chartPeriod) || 6;
+  const validPeriods = [1, 3, 6];
+  const period = validPeriods.includes(chartPeriod) ? chartPeriod : 6;
   const categoryList = canEdit ? await listCategories(session.organizationId) : [];
 
   const [[org], summary] = await Promise.all([
@@ -97,7 +112,7 @@ export default async function DashboardPage() {
     summary, baseCurrency, session.displayCurrency ?? baseCurrency
   );
 
-  const months = disp.monthlyTotals;
+  const months = disp.monthlyTotals.slice(-period);
   const cur = months.at(-1);
   const prev = months.at(-2);
   const incomeChg = cur && prev ? pct(cur.income, prev.income) : null;
@@ -121,7 +136,7 @@ export default async function DashboardPage() {
   ].filter((s) => s.value > 0);
 
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-6 py-4">
+    <div className="w-full px-4 py-4 sm:px-6">
       {/* Page header */}
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
@@ -178,7 +193,6 @@ export default async function DashboardPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-muted-foreground">Last 6 months</span>
                   <button className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-elevated">
-                    <MoreHorizontal className="size-4" />
                   </button>
                 </div>
               </CardHeader>
@@ -192,7 +206,6 @@ export default async function DashboardPage() {
               <CardHeader className="flex-row items-center justify-between pb-0">
                 <CardTitle>Risk Overview</CardTitle>
                 <button className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-elevated">
-                  <MoreHorizontal className="size-4" />
                 </button>
               </CardHeader>
               <CardContent className="pt-3">

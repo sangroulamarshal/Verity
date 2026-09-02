@@ -54,7 +54,7 @@ export default async function AuditLogPage(props: PageProps<"/transactions/audit
   });
 
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-6 py-4">
+    <div className="w-full px-4 py-4 sm:px-6">
       {/* Header */}
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>

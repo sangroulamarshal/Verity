@@ -5,7 +5,7 @@ export default async function SettingsLayout({ children }: { children: React.Rea
   const session = await verifySession();
 
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-6 py-4">
+    <div className="w-full px-4 py-4 sm:px-6">
       {/* Page header */}
       <div className="mb-6">
         <h1 className="text-[18px] font-semibold tracking-tight">Settings</h1>

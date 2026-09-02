@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +27,13 @@ export function OrganizationForm({
   timezone,
 }: OrganizationFormProps) {
   const [state, formAction, pending] = useActionState(updateOrganizationAction, initialState);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state.success) {
+      router.refresh();
+    }
+  }, [state.success]);
 
   return (
     <form action={formAction} className="flex flex-col gap-4">

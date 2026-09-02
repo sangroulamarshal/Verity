@@ -1,6 +1,6 @@
 ﻿import type { Metadata } from "next";
 import Link from "next/link";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, ChevronUp, ChevronDown } from "lucide-react";
 import { verifySession } from "@/server/services/session";
 import { listCustomers } from "@/server/services/customers";
 import { canWriteCustomers } from "@/lib/permissions";
@@ -10,6 +10,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { CustomerDialog } from "@/features/customers/customer-dialog";
 import { CustomerSearch } from "@/features/customers/customer-search";
 import { formatDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Customers" };
 
@@ -22,21 +23,42 @@ export default async function CustomersPage(props: PageProps<"/customers">) {
   const sp = await props.searchParams;
   const page = Math.max(1, Number(firstParam(sp.page)) || 1);
   const search = firstParam(sp.search);
+  const sortBy = (firstParam(sp.sortBy) ?? "name") as "name" | "updatedAt";
+  const sortDir = (firstParam(sp.sortDir) ?? "asc") as "asc" | "desc";
   const canEdit = canWriteCustomers(session.role);
 
-  const { rows, total, totalPages } = await listCustomers(session.organizationId, { page, search });
+  const { rows, total, totalPages } = await listCustomers(session.organizationId, {
+    page, search, sortBy, sortDir,
+  });
+
+  const sortHref = (col: "name" | "updatedAt") => {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    params.set("sortBy", col);
+    params.set("sortDir", sortBy === col && sortDir === "asc" ? "desc" : "asc");
+    return `/customers?${params}`;
+  };
 
   const pageHref = (p: number) => {
     const params = new URLSearchParams();
     params.set("page", String(p));
     if (search) params.set("search", search);
+    if (sortBy !== "name") params.set("sortBy", sortBy);
+    if (sortDir !== "asc") params.set("sortDir", sortDir);
     return `/customers?${params}`;
   };
 
+  function SortIcon({ col }: { col: "name" | "updatedAt" }) {
+    if (sortBy !== col) return null;
+    return sortDir === "asc"
+      ? <ChevronUp className="inline size-3 ml-0.5 opacity-60" />
+      : <ChevronDown className="inline size-3 ml-0.5 opacity-60" />;
+  }
+
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-6 py-4">
+    <div className="w-full px-4 py-4 sm:px-6">
       {/* Header */}
-      <div className="mb-4 flex items-start justify-between gap-3">
+      <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-[18px] font-semibold tracking-tight">Customers</h1>
           <p className="mt-0.5 text-[13px] text-muted-foreground">
@@ -59,21 +81,28 @@ export default async function CustomersPage(props: PageProps<"/customers">) {
         <div className="w-64">
           <CustomerSearch />
         </div>
-        <Button variant="outline" size="sm">Status: All</Button>
         <Button variant="outline" size="sm">Risk Level: All</Button>
       </div>
 
       {/* Table */}
       <div className="rounded-[6px] border border-border bg-surface overflow-hidden">
-        {/* Table header */}
+        <div className="overflow-x-auto">
         <table className="w-full text-[13px] border-collapse">
           <thead className="border-b border-border bg-elevated/30">
             <tr>
-              <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Customer</th>
+              <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                <Link href={sortHref("name")} className="hover:text-foreground transition-colors">
+                  Customer <SortIcon col="name" />
+                </Link>
+              </th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Contact</th>
               <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Transactions</th>
-              <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Risk</th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Last Activity</th>
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Risk</th>
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                <Link href={sortHref("updatedAt")} className="hover:text-foreground transition-colors">
+                  Last Activity <SortIcon col="updatedAt" />
+                </Link>
+              </th>
               <th className="w-10 px-4 py-3" />
             </tr>
           </thead>
@@ -114,7 +143,7 @@ export default async function CustomersPage(props: PageProps<"/customers">) {
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">--</td>
                   <td className="px-4 py-3">
-                    <Badge variant="secondary">Low</Badge>
+                    <Badge variant="risk-low">Low</Badge>
                   </td>
                   <td className="px-4 py-3 text-[12px] text-muted-foreground">
                     {customer.updatedAt
@@ -137,6 +166,7 @@ export default async function CustomersPage(props: PageProps<"/customers">) {
           </tbody>
         </table>
 
+        </div>
         {/* Pagination footer */}
         <div className="flex items-center justify-between border-t border-border px-5 py-2.5">
           <span className="text-[12px] text-muted-foreground">
@@ -152,12 +182,7 @@ export default async function CustomersPage(props: PageProps<"/customers">) {
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                 const p = i + 1;
                 return (
-                  <Button
-                    key={p}
-                    asChild={p !== page}
-                    variant={p === page ? "default" : "ghost"}
-                    size="sm"
-                  >
+                  <Button key={p} asChild={p !== page} variant={p === page ? "default" : "ghost"} size="sm">
                     {p === page ? <span>{p}</span> : <Link href={pageHref(p)}>{p}</Link>}
                   </Button>
                 );

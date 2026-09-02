@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/ui/skeleton";
+﻿import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -11,7 +11,7 @@ import {
 
 export default function ImportsLoading() {
   return (
-    <div className="mx-auto w-full max-w-7xl px-6 py-8 md:px-10">
+    <div className="w-full px-4 py-4 sm:px-6">
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <Skeleton className="h-5 w-24" />

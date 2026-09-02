@@ -1,5 +1,5 @@
-import "server-only";
-import { and, eq, ilike, or, sql } from "drizzle-orm";
+﻿import "server-only";
+import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { customers, transactions } from "@/db/schema";
 
@@ -60,7 +60,7 @@ export async function listCustomers(
       .select()
       .from(customers)
       .where(where)
-      .orderBy(customers.name)
+      .orderBy(options.sortBy === "updatedAt" ? (options.sortDir === "desc" ? desc(customers.updatedAt) : asc(customers.updatedAt)) : (options.sortDir === "desc" ? desc(customers.name) : asc(customers.name)))
       .limit(pageSize)
       .offset(offset),
     db.select({ value: sql<number>`count(*)` }).from(customers).where(where),

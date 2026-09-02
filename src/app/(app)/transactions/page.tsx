@@ -64,7 +64,7 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
   const rowsWithDisplay = await withDisplayAmounts(rows, displayCurrency);
 
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-6 py-4">
+    <div className="w-full px-4 py-4 sm:px-6">
       {/* Header */}
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
@@ -99,14 +99,14 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
                 <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Amount</th>
                 <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Currency</th>
                 <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Risk</th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Status</th>
+
                 {canEdit && <th className="w-10 px-4 py-2.5" />}
               </tr>
             </thead>
             <tbody>
               {rowsWithDisplay.length === 0 ? (
                 <tr>
-                  <td colSpan={canEdit ? 10 : 9} className="px-5 py-16 text-center text-[13px] text-muted-foreground">
+                  <td colSpan={canEdit ? 9 : 8} className="px-5 py-16 text-center text-[13px] text-muted-foreground">
                     No transactions found. Try adjusting your filters.
                   </td>
                 </tr>
@@ -146,9 +146,7 @@ export default async function TransactionsPage(props: PageProps<"/transactions">
                           </Badge>
                         ) : <span className="text-muted-foreground/30">--</span>}
                       </td>
-                      <td className="px-4 py-2.5">
-                        <Badge variant="secondary">Completed</Badge>
-                      </td>
+
                       {canEdit && (
                         <td className="px-4 py-2.5">
                           <div className="flex items-center justify-end gap-1">

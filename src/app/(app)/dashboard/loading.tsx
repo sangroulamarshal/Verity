@@ -1,57 +1,71 @@
-import { Skeleton } from "@/components/ui/skeleton";
+﻿import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 export default function DashboardLoading() {
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-8">
-      <div className="mb-6">
-        <Skeleton className="h-4 w-40" />
-        <Skeleton className="mt-2 h-6 w-56" />
+    <div className="w-full px-4 py-4 sm:px-6">
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div><Skeleton className="h-5 w-32" /><Skeleton className="mt-1.5 h-3.5 w-56 mt-2" /></div>
+        <Skeleton className="h-8 w-36 rounded-md" />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, i) => (
+      {/* 5 KPI cards */}
+      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, i) => (
           <Card key={i}>
-            <CardHeader className="pb-2">
-              <Skeleton className="h-3 w-20" />
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2 pt-0">
-              <Skeleton className="h-7 w-28" />
-              <Skeleton className="h-3 w-24" />
+            <CardContent className="px-4 py-3.5">
+              <Skeleton className="h-3 w-20 mb-2" />
+              <Skeleton className="h-6 w-24" />
+              <Skeleton className="h-3 w-16 mt-1.5" />
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <Card className="mt-4">
-        <CardHeader>
-          <Skeleton className="h-4 w-24" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-40 w-full" />
-        </CardContent>
-      </Card>
+      {/* Two-column: chart + risk */}
+      <div className="mt-4 grid gap-3 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex-row items-center justify-between pb-0">
+            <Skeleton className="h-4 w-28" />
+            <div className="flex gap-1"><Skeleton className="h-5 w-8" /><Skeleton className="h-5 w-8" /><Skeleton className="h-5 w-8" /></div>
+          </CardHeader>
+          <CardContent className="pt-3"><Skeleton className="h-[220px] w-full" /></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-0"><Skeleton className="h-4 w-24" /></CardHeader>
+          <CardContent className="pt-3"><Skeleton className="h-[180px] w-full rounded-full mx-auto max-w-[180px]" /></CardContent>
+        </Card>
+      </div>
 
-      <Card className="mt-4">
-        <CardHeader className="flex-row items-center justify-between">
-          <Skeleton className="h-4 w-36" />
-          <Skeleton className="h-8 w-16" />
-        </CardHeader>
-        <CardContent className="p-0">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between gap-4 border-b border-border/70 px-5 py-3 last:border-b-0"
-            >
-              <div className="flex flex-col gap-1.5">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-3 w-20" />
+      {/* Two-column: recent transactions + risk alerts */}
+      <div className="mt-4 grid gap-3 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex-row items-center justify-between">
+            <Skeleton className="h-4 w-36" /><Skeleton className="h-3 w-12" />
+          </CardHeader>
+          <CardContent className="p-0">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-between gap-4 border-b border-border/50 px-5 py-2.5 last:border-0">
+                <div className="flex flex-col gap-1"><Skeleton className="h-3.5 w-32" /><Skeleton className="h-3 w-20" /></div>
+                <Skeleton className="h-4 w-20" />
               </div>
-              <Skeleton className="h-4 w-16" />
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+            ))}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex-row items-center justify-between">
+            <Skeleton className="h-4 w-28" /><Skeleton className="h-3 w-12" />
+          </CardHeader>
+          <CardContent className="p-0">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-between gap-2 border-b border-border/50 px-4 py-3 last:border-0">
+                <div className="flex flex-col gap-1"><Skeleton className="h-3 w-20" /><Skeleton className="h-3 w-28" /></div>
+                <Skeleton className="h-4 w-12" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
