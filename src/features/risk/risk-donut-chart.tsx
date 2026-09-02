@@ -16,13 +16,13 @@ interface RiskDonutChartProps {
 export function RiskDonutChart({ total, segments }: RiskDonutChartProps) {
   if (total === 0) {
     return (
-      <div className="flex flex-col items-center gap-4 w-full">
-        <div className="relative flex items-center justify-center" style={{ width: 160, height: 160 }}>
-          <svg width={160} height={160} viewBox="0 0 160 160">
-            <circle cx={80} cy={80} r={60} fill="none" stroke="currentColor" strokeOpacity="0.08" strokeWidth={24} />
+      <div className="flex flex-col items-center gap-4 w-full py-4">
+        <div className="relative flex items-center justify-center" style={{ width: 200, height: 200 }}>
+          <svg width={200} height={200} viewBox="0 0 200 200">
+            <circle cx={100} cy={100} r={75} fill="none" stroke="currentColor" strokeOpacity="0.08" strokeWidth={28} />
           </svg>
           <div className="absolute flex flex-col items-center">
-            <span className="text-2xl font-bold">0</span>
+            <span className="text-3xl font-bold">0</span>
             <span className="text-[11px] text-muted-foreground uppercase tracking-wider">total</span>
           </div>
         </div>
@@ -31,16 +31,17 @@ export function RiskDonutChart({ total, segments }: RiskDonutChartProps) {
   }
 
   return (
-    <div className="flex flex-col items-center gap-4 w-full">
-      <div className="relative" style={{ width: 160, height: 160 }}>
+    <div className="flex flex-col items-center gap-5 w-full py-2">
+      {/* Donut */}
+      <div className="relative" style={{ width: 200, height: 200 }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={segments}
               cx="50%"
               cy="50%"
-              innerRadius={52}
-              outerRadius={72}
+              innerRadius={66}
+              outerRadius={90}
               paddingAngle={2}
               dataKey="value"
               startAngle={90}
@@ -54,23 +55,21 @@ export function RiskDonutChart({ total, segments }: RiskDonutChartProps) {
           </PieChart>
         </ResponsiveContainer>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-[22px] font-bold leading-none">{total}</span>
-          <span className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">total</span>
+          <span className="text-[28px] font-bold leading-none">{total}</span>
+          <span className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1.5">total</span>
         </div>
       </div>
-      <div className="flex flex-col gap-1.5 w-full">
+
+      {/* Legend */}
+      <div className="flex flex-col gap-2 w-full max-w-[220px]">
         {segments.map((seg) => {
           const pct = Math.round((seg.value / total) * 100);
           return (
-            <div key={seg.label} className="flex items-center justify-between text-[12px]">
-              <div className="flex items-center gap-2">
-                <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
-                <span className="text-muted-foreground">{seg.label}</span>
-              </div>
-              <div className="flex items-center gap-2 tabular-nums">
-                <span className="font-semibold">{seg.value}</span>
-                <span className="text-muted-foreground/50 w-7 text-right">{pct}%</span>
-              </div>
+            <div key={seg.label} className="flex items-center gap-2 text-[13px]">
+              <span className="inline-block h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
+              <span className="text-muted-foreground flex-1">{seg.label}</span>
+              <span className="font-semibold tabular-nums">{seg.value}</span>
+              <span className="text-muted-foreground/50 tabular-nums w-8 text-right">{pct}%</span>
             </div>
           );
         })}
