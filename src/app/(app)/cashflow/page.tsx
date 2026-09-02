@@ -472,7 +472,7 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
                     </tr>
                   </thead>
                   <tbody>
-                    {(() => { const totalDays = forecast.days.length; const totalDayPages = Math.ceil(totalDays / PAGE_SIZE); const pagedDays = forecast.days.slice((dayPage - 1) * PAGE_SIZE, dayPage * PAGE_SIZE); return pagedDays.map((day) => (
+                    {forecast.days.slice((dayPage - 1) * PAGE_SIZE, dayPage * PAGE_SIZE).map((day) => (
                       <tr
                         key={day.date}
                         className={cn(
