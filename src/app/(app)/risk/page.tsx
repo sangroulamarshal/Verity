@@ -60,15 +60,13 @@ export default async function RiskPage(props: PageProps<"/risk">) {
     (summary.counts.CRITICAL ?? 0) +
     (summary.counts.HIGH ?? 0) +
     (summary.counts.MEDIUM ?? 0) +
-    (summary.counts.LOW ?? 0) +
-    (summary.counts.INFO ?? 0);
+    (summary.counts.LOW ?? 0);
 
   const riskSegments = [
     { value: summary.counts.CRITICAL ?? 0, color: "#dc2626", label: "Critical" },
     { value: summary.counts.HIGH ?? 0,     color: "#ea580c", label: "High" },
     { value: summary.counts.MEDIUM ?? 0,   color: "#d97706", label: "Medium" },
     { value: summary.counts.LOW ?? 0,      color: "#16a34a", label: "Low" },
-    { value: summary.counts.INFO ?? 0,     color: "#6b7280", label: "Reviewed" },
   ].filter((s) => s.value > 0);
 
   return (
@@ -331,3 +329,4 @@ export default async function RiskPage(props: PageProps<"/risk">) {
     </div>
   );
 }
+

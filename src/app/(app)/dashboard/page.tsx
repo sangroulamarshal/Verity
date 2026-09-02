@@ -105,15 +105,14 @@ export default async function DashboardPage() {
     (riskSummary.counts.CRITICAL ?? 0) +
     (riskSummary.counts.HIGH ?? 0) +
     (riskSummary.counts.MEDIUM ?? 0) +
-    (riskSummary.counts.LOW ?? 0) +
-    (riskSummary.counts.INFO ?? 0);
+    (riskSummary.counts.LOW ?? 0);
 
   const riskSegments = [
     { value: riskSummary.counts.CRITICAL ?? 0, color: "#dc2626", label: "Critical" },
     { value: riskSummary.counts.HIGH ?? 0,     color: "#ea580c", label: "High" },
     { value: riskSummary.counts.MEDIUM ?? 0,   color: "#d97706", label: "Medium" },
     { value: riskSummary.counts.LOW ?? 0,      color: "#16a34a", label: "Low" },
-    { value: riskSummary.counts.INFO ?? 0,     color: "#6b7280", label: "Reviewed" },
+
   ].filter((s) => s.value > 0);
 
   return (
@@ -347,3 +346,4 @@ export default async function DashboardPage() {
     </div>
   );
 }
+
