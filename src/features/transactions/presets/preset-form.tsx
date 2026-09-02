@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { TRANSACTION_CURRENCIES } from "@/lib/currency";
 import { PAYMENT_METHOD_LABELS, PAYMENT_METHODS } from "../schema";
 import type { PresetFormState } from "./actions";
+import { CategoryPickerField } from "../category-picker";
 
 export interface PresetFormDefaults {
   name?: string;

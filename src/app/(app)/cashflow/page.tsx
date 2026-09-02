@@ -38,6 +38,8 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
   const searchParams = await props.searchParams;
   const session = await verifySession();
   const horizon = parseHorizon(searchParams.horizon);
+  const PAGE_SIZE = 10;
+  const dayPage = Math.max(1, Number(searchParams.dayPage) || 1);
 
   const [org] = await db
     .select({ baseCurrency: organizations.baseCurrency })
@@ -470,7 +472,7 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
                     </tr>
                   </thead>
                   <tbody>
-                    {forecast.days.map((day) => (
+                    {(() => { const totalDays = forecast.days.length; const totalDayPages = Math.ceil(totalDays / PAGE_SIZE); const pagedDays = forecast.days.slice((dayPage - 1) * PAGE_SIZE, dayPage * PAGE_SIZE); return pagedDays.map((day) => (
                       <tr
                         key={day.date}
                         className={cn(
@@ -529,6 +531,22 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
                   </tbody>
                 </table>
               </div>
+              {/* Day pagination */}
+              {Math.ceil(forecast.days.length / PAGE_SIZE) > 1 && (
+                <div className="flex items-center justify-between border-t border-border px-5 py-2.5">
+                  <span className="text-[12px] text-muted-foreground">
+                    Page {dayPage} of {Math.ceil(forecast.days.length / PAGE_SIZE)}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {dayPage > 1 && (
+                      <a href={`?horizon=${horizon}&dayPage=${dayPage - 1}`} className="rounded-md border border-border px-2.5 py-1 text-[12px] hover:bg-elevated transition-colors">&larr; Prev</a>
+                    )}
+                    {dayPage < Math.ceil(forecast.days.length / PAGE_SIZE) && (
+                      <a href={`?horizon=${horizon}&dayPage=${dayPage + 1}`} className="rounded-md border border-border px-2.5 py-1 text-[12px] hover:bg-elevated transition-colors">Next &rarr;</a>
+                    )}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </>
