@@ -1,7 +1,3 @@
-/**
- * Pure display-formatting helpers. No framework imports, no DB access.
- */
-
 const currencyFormatters = new Map<string, Intl.NumberFormat>();
 
 function getCurrencyFormatter(currency: string): Intl.NumberFormat {
@@ -34,12 +30,8 @@ export function formatCompactCurrency(amount: string | number, currency: string)
   const sign = value < 0 ? "-" : "";
   const symbol = (() => {
     try {
-      return getCurrencyFormatter(currency || "USD")
-        .formatToParts(0)
-        .find((p) => p.type === "currency")?.value ?? currency;
-    } catch {
-      return currency;
-    }
+      return getCurrencyFormatter(currency || "USD").formatToParts(0).find((p) => p.type === "currency")?.value ?? currency;
+    } catch { return currency; }
   })();
   if (abs >= 1_000_000_000) return `${sign}${symbol} ${(abs / 1_000_000_000).toFixed(2)}B`;
   if (abs >= 1_000_000)     return `${sign}${symbol} ${(abs / 1_000_000).toFixed(1)}M`;
@@ -57,7 +49,6 @@ export function formatDate(
   switch (format) {
     case "MM/DD/YYYY": return `${month}/${day}/${year}`;
     case "YYYY-MM-DD": return `${year}-${month}-${day}`;
-    case "DD/MM/YYYY":
     default:           return `${day}/${month}/${year}`;
   }
 }
