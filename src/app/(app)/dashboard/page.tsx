@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CashFlowChart } from "@/components/cash-flow-chart";
+import { RiskDonutChart } from "@/features/risk/risk-donut-chart";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Overview" };
@@ -100,6 +101,21 @@ export default async function DashboardPage() {
 
   const hasActivity = disp.transactionCount > 0;
 
+  const riskTotal =
+    (riskSummary.counts.CRITICAL ?? 0) +
+    (riskSummary.counts.HIGH ?? 0) +
+    (riskSummary.counts.MEDIUM ?? 0) +
+    (riskSummary.counts.LOW ?? 0) +
+    (riskSummary.counts.INFO ?? 0);
+
+  const riskSegments = [
+    { value: riskSummary.counts.CRITICAL ?? 0, color: "#dc2626", label: "Critical" },
+    { value: riskSummary.counts.HIGH ?? 0,     color: "#ea580c", label: "High" },
+    { value: riskSummary.counts.MEDIUM ?? 0,   color: "#d97706", label: "Medium" },
+    { value: riskSummary.counts.LOW ?? 0,      color: "#16a34a", label: "Low" },
+    { value: riskSummary.counts.INFO ?? 0,     color: "#6b7280", label: "Reviewed" },
+  ].filter((s) => s.value > 0);
+
   return (
     <div className="mx-auto w-full max-w-[1280px] px-6 py-6">
       {/* Page header */}
@@ -138,7 +154,7 @@ export default async function DashboardPage() {
         </Card>
       ) : (
         <>
-          {/* KPI row -- matches screenshot exactly: 5 cards */}
+          {/* KPI row */}
           <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <MetricCard label="Total Income" value={formatCurrency(disp.totalIncome, currency)} delta={incomeChg} icon={TrendingUp} iconColor="bg-income/15" />
             <MetricCard label="Total Expenses" value={formatCurrency(disp.totalExpense, currency)} delta={expChg} deltaInverse icon={ArrowDownRight} iconColor="bg-expense/15" />
@@ -149,7 +165,7 @@ export default async function DashboardPage() {
 
           {/* Two-column charts row */}
           <div className="mt-4 grid gap-4 lg:grid-cols-3">
-            {/* Cash flow chart - takes 2/3 */}
+            {/* Cash flow chart - 2/3 */}
             <Card className="lg:col-span-2">
               <CardHeader className="flex-row items-center justify-between pb-0">
                 <CardTitle>Cash Flow Trend</CardTitle>
@@ -165,7 +181,7 @@ export default async function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Risk overview - takes 1/3 */}
+            {/* Risk overview - 1/3 — donut chart replaces progress bars */}
             <Card>
               <CardHeader className="flex-row items-center justify-between pb-0">
                 <CardTitle>Risk Overview</CardTitle>
@@ -177,36 +193,11 @@ export default async function DashboardPage() {
                 {riskSummary.totalAnalyzed === 0 ? (
                   <p className="text-[13px] text-muted-foreground">No transactions evaluated yet.</p>
                 ) : (
-                  <div className="space-y-2.5">
-                    {(["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const).map((lvl) => {
-                      const count = riskSummary.counts[lvl];
-                      const pctVal = riskSummary.totalAnalyzed > 0
-                        ? Math.round((count / riskSummary.totalAnalyzed) * 100)
-                        : 0;
-                      const colors = {
-                        CRITICAL: { bar: "bg-risk-critical", text: "text-risk-critical" },
-                        HIGH: { bar: "bg-risk-high", text: "text-risk-high" },
-                        MEDIUM: { bar: "bg-risk-medium", text: "text-risk-medium" },
-                        LOW: { bar: "bg-risk-low", text: "text-risk-low" },
-                      };
-                      return (
-                        <div key={lvl} className="flex items-center gap-3">
-                          <span className={cn("w-14 text-[12px] font-medium capitalize", colors[lvl].text)}>
-                            {lvl.charAt(0) + lvl.slice(1).toLowerCase()}
-                          </span>
-                          <div className="flex-1 h-1.5 rounded-full bg-elevated overflow-hidden">
-                            <div className={cn("h-full rounded-full", colors[lvl].bar)} style={{ width: `${pctVal}%` }} />
-                          </div>
-                          <span className="w-6 text-right text-[12px] tabular-nums text-muted-foreground">{count}</span>
-                          <span className="w-8 text-right text-[11px] text-muted-foreground">{pctVal}%</span>
-                        </div>
-                      );
-                    })}
-                    <div className="pt-2">
-                      <Link href="/risk" className="inline-flex items-center gap-1 text-[12px] text-primary hover:underline">
-                        View all risk alerts <ArrowRight className="size-3" />
-                      </Link>
-                    </div>
+                  <div className="flex flex-col items-center gap-3">
+                    <RiskDonutChart total={riskTotal} segments={riskSegments} />
+                    <Link href="/risk" className="inline-flex items-center gap-1 text-[12px] text-primary hover:underline">
+                      View all risk alerts <ArrowRight className="size-3" />
+                    </Link>
                   </div>
                 )}
               </CardContent>

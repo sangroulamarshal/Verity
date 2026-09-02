@@ -9,6 +9,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { RiskDonutChart } from "@/features/risk/risk-donut-chart";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +56,21 @@ export default async function RiskPage(props: PageProps<"/risk">) {
 
   const hasAny = summary.totalAnalyzed > 0;
 
+  const riskTotal =
+    (summary.counts.CRITICAL ?? 0) +
+    (summary.counts.HIGH ?? 0) +
+    (summary.counts.MEDIUM ?? 0) +
+    (summary.counts.LOW ?? 0) +
+    (summary.counts.INFO ?? 0);
+
+  const riskSegments = [
+    { value: summary.counts.CRITICAL ?? 0, color: "#dc2626", label: "Critical" },
+    { value: summary.counts.HIGH ?? 0,     color: "#ea580c", label: "High" },
+    { value: summary.counts.MEDIUM ?? 0,   color: "#d97706", label: "Medium" },
+    { value: summary.counts.LOW ?? 0,      color: "#16a34a", label: "Low" },
+    { value: summary.counts.INFO ?? 0,     color: "#6b7280", label: "Reviewed" },
+  ].filter((s) => s.value > 0);
+
   return (
     <div className="mx-auto w-full max-w-[1280px] px-6 py-6">
       {/* Header */}
@@ -82,7 +98,7 @@ export default async function RiskPage(props: PageProps<"/risk">) {
         </Card>
       ) : (
         <>
-          {/* 6 metric cards matching screenshot */}
+          {/* 6 metric cards */}
           <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {(["CRITICAL", "HIGH", "MEDIUM", "LOW"] as RiskLevel[]).map((lvl) => {
               const col = LEVEL_COLORS[lvl];
@@ -124,28 +140,20 @@ export default async function RiskPage(props: PageProps<"/risk">) {
             </Card>
           </div>
 
-          {/* Two-column: trend chart + category breakdown */}
+          {/* Two-column: donut chart + recent alerts */}
           <div className="mt-4 grid gap-4 lg:grid-cols-3">
+            {/* Risk Breakdown donut — replaces placeholder trend chart */}
             <Card className="lg:col-span-2">
               <CardHeader className="flex-row items-center justify-between pb-0">
-                <CardTitle>Risk Trend</CardTitle>
+                <CardTitle>Risk Breakdown</CardTitle>
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-muted-foreground">Last 7 days</span>
                   <button className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-elevated">
                     <MoreHorizontal className="size-4" />
                   </button>
                 </div>
               </CardHeader>
-              <CardContent className="pt-3">
-                <div className="flex h-32 items-center justify-center text-[13px] text-muted-foreground/40">
-                  Risk trend chart (requires more data)
-                </div>
-                <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
-                  <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-risk-critical" /> Critical</span>
-                  <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-risk-high" /> High</span>
-                  <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-risk-medium" /> Medium</span>
-                  <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-risk-low" /> Low</span>
-                </div>
+              <CardContent className="pt-4 flex justify-center">
+                <RiskDonutChart total={riskTotal} segments={riskSegments} />
               </CardContent>
             </Card>
 
@@ -165,7 +173,7 @@ export default async function RiskPage(props: PageProps<"/risk">) {
                       className="flex items-start justify-between gap-2 px-5 py-3 hover:bg-elevated/30 transition-colors"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-[13px] font-medium font-mono text-[11px]">{a.transactionId.slice(0, 8).toUpperCase()}</p>
+                        <p className="truncate font-mono text-[11px] font-medium">{a.transactionId.slice(0, 8).toUpperCase()}</p>
                         <p className="text-[11px] text-muted-foreground">{a.topSignal ?? "Risk event"}</p>
                       </div>
                       <div className="flex flex-col items-end gap-1 shrink-0">
