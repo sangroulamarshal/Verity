@@ -29,8 +29,6 @@ export interface TransactionFormDefaults {
 
 interface TransactionFormProps {
   categories?: string[];
-  categories?: string[];
-  categories?: string[];
   action: (
     state: TransactionFormState | undefined,
     formData: FormData

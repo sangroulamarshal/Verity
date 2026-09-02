@@ -5,10 +5,6 @@ import { categories } from "@/db/schema";
 import { PREDEFINED_CATEGORIES, type CategoryType } from "@/lib/categories";
 import { auditLogSafely } from "@/server/services/audit-log";
 
-/**
- * Returns merged category names for a given type —
- * predefined defaults + custom org categories, deduped and sorted.
- */
 export async function listCategories(
   organizationId: string,
   type?: "INCOME" | "EXPENSE"
@@ -27,9 +23,6 @@ export async function listCategories(
   return merged.sort((a, b) => a.localeCompare(b));
 }
 
-/**
- * Returns raw custom category rows for the Manage Categories page.
- */
 export async function listCustomCategories(
   organizationId: string
 ): Promise<(typeof categories.$inferSelect)[]> {
@@ -45,43 +38,32 @@ export async function listCustomCategories(
     .orderBy(categories.name);
 }
 
-/**
- * Creates a new custom category for the org and audit logs it.
- */
 export async function createCategory(
   organizationId: string,
   userId: string,
-  email: string,
+  _email: string,
   data: { name: string; type: CategoryType }
 ): Promise<void> {
   const [created] = await db
     .insert(categories)
-    .values({
-      organizationId,
-      name: data.name.trim(),
-      type: data.type,
-    })
+    .values({ organizationId, name: data.name.trim(), type: data.type })
     .returning();
 
   await auditLogSafely({
+    action: "TRANSACTION_CREATED",
     organizationId,
     userId,
-    userEmail: email,
-    action: "TRANSACTION_CREATED",
     entityType: "category",
     entityId: created.id,
-    newValues: { name: data.name, type: data.type },
+    metadata: { name: data.name, type: data.type },
   });
 }
 
-/**
- * Soft-deletes a custom category (sets is_archived = true) and audit logs it.
- */
 export async function archiveCategory(
   organizationId: string,
   categoryId: string,
   userId: string,
-  email: string
+  _email: string
 ): Promise<void> {
   await db
     .update(categories)
@@ -94,12 +76,11 @@ export async function archiveCategory(
     );
 
   await auditLogSafely({
+    action: "TRANSACTION_DELETED",
     organizationId,
     userId,
-    userEmail: email,
-    action: "TRANSACTION_DELETED",
     entityType: "category",
     entityId: categoryId,
-    newValues: { isArchived: true },
+    metadata: { isArchived: true },
   });
 }

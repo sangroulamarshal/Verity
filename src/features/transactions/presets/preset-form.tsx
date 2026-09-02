@@ -23,7 +23,6 @@ export interface PresetFormDefaults {
 
 interface PresetFormProps {
   categories?: string[];
-  categories?: string[];
   action: (state: PresetFormState | undefined, formData: FormData) => Promise<PresetFormState>;
   defaultValues?: PresetFormDefaults;
   submitLabel: string;

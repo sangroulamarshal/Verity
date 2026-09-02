@@ -1,0 +1,46 @@
+﻿"use client";
+
+import { useActionState, useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { TRANSACTION_CURRENCIES } from "@/lib/currency";
+import { PAYMENT_METHOD_LABELS, PAYMENT_METHODS } from "./schema";
+import { ExchangeRatePreview } from "./exchange-rate-preview";
+import { CustomerPicker } from "./customer-picker";
+import { CategoryPickerField } from "./category-picker";
+import type { TransactionFormState } from "./actions";
+
+export interface TransactionFormDefaults {
+  date?: string;
+  amount?: string;
+  currency?: string;
+  type?: "INCOME" | "EXPENSE";
+  category?: string;
+  counterparty?: string;
+  paymentMethod?: string;
+  description?: string;
+  referenceId?: string;
+  presetId?: string;
+  customerId?: string;
+}
+
+interface TransactionFormProps {
+  action: (
+    state: TransactionFormState | undefined,
+    formData: FormData
+  ) => Promise<TransactionFormState>;
+  defaultValues?: TransactionFormDefaults;
+  submitLabel: string;
+  pendingLabel: string;
+  onSuccess?: () => void;
+  categories?: string[];
+}
+
+const initialState: TransactionFormState = {};
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
