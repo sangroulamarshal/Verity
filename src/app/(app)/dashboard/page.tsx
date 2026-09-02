@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { eq } from "drizzle-orm";
 import {
@@ -23,7 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CashFlowChart } from "@/components/cash-flow-chart";
 import { RiskDonutChart } from "@/features/risk/risk-donut-chart";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, formatCompactCurrency } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Overview" };
 
@@ -155,9 +155,9 @@ export default async function DashboardPage() {
         <>
           {/* KPI row */}
           <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            <MetricCard label="Total Income" value={formatCurrency(disp.totalIncome, currency)} delta={incomeChg} icon={TrendingUp} iconColor="bg-income/15" />
-            <MetricCard label="Total Expenses" value={formatCurrency(disp.totalExpense, currency)} delta={expChg} deltaInverse icon={ArrowDownRight} iconColor="bg-expense/15" />
-            <MetricCard label="Net Cash Flow" value={formatCurrency(disp.netCashFlow, currency)} delta={netChg} icon={TrendingUp} iconColor="bg-primary/15" />
+            <MetricCard label="Total Income" value={formatCompactCurrency(disp.totalIncome, currency)} delta={incomeChg} icon={TrendingUp} iconColor="bg-income/15" />
+            <MetricCard label="Total Expenses" value={formatCompactCurrency(disp.totalExpense, currency)} delta={expChg} deltaInverse icon={ArrowDownRight} iconColor="bg-expense/15" />
+            <MetricCard label="Net Cash Flow" value={formatCompactCurrency(disp.netCashFlow, currency)} delta={netChg} icon={TrendingUp} iconColor="bg-primary/15" />
             <MetricCard label="Transactions" value={disp.transactionCount.toLocaleString()} icon={FileText} iconColor="bg-muted" />
             <MetricCard label="Risk Alerts" value={String(riskSummary.requiringReview)} icon={ShieldAlert} iconColor="bg-risk-critical/15" />
           </div>
@@ -180,7 +180,7 @@ export default async function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Risk overview - 1/3 — donut chart replaces progress bars */}
+            {/* Risk overview - 1/3 â€” donut chart replaces progress bars */}
             <Card>
               <CardHeader className="flex-row items-center justify-between pb-0">
                 <CardTitle>Risk Overview</CardTitle>
@@ -346,4 +346,5 @@ export default async function DashboardPage() {
     </div>
   );
 }
+
 

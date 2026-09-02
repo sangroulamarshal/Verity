@@ -70,3 +70,28 @@ export function formatDate(
       return `${day}/${month}/${year}`;
   }
 }
+
+/**
+ * Compact currency formatter for KPI cards and chart axes.
+ * Abbreviates large values: 15183005007 ? "Rs 15.18B", 2500000 ? "Rs 2.5M", 12345 ? "Rs 12.3K"
+ * Falls back to full formatCurrency below 10,000.
+ */
+export function formatCompactCurrency(amount: string | number, currency: string): string {
+  const value = typeof amount === "string" ? Number(amount) : amount;
+  if (!Number.isFinite(value)) return "—";
+  const abs = Math.abs(value);
+  const sign = value < 0 ? "-" : "";
+  const symbol = (() => {
+    try {
+      return getCurrencyFormatter(currency || "USD")
+        .formatToParts(0)
+        .find((p) => p.type === "currency")?.value ?? currency;
+    } catch {
+      return currency;
+    }
+  })();
+  if (abs >= 1_000_000_000) return `${sign}${symbol} ${(abs / 1_000_000_000).toFixed(2)}B`;
+  if (abs >= 1_000_000)     return `${sign}${symbol} ${(abs / 1_000_000).toFixed(1)}M`;
+  if (abs >= 10_000)        return `${sign}${symbol} ${(abs / 1_000).toFixed(1)}K`;
+  return formatCurrency(value, currency);
+}
