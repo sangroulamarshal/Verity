@@ -16,15 +16,15 @@ import { getDashboardSummary } from "@/server/services/dashboard";
 import { resolveDisplaySummary } from "@/server/services/dashboard-display";
 import { getRiskSummary } from "@/server/services/risk";
 import { getForecastSummary } from "@/server/services/forecast";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { TransactionDialog } from "@/features/transactions/transaction-dialog";
 import { listCategories } from "@/server/services/categories";
 import { canWriteTransactions } from "@/lib/permissions";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CashFlowChart } from "@/components/cash-flow-chart";
 import { RiskDonutChart } from "@/features/risk/risk-donut-chart";
+import { TransactionDialog } from "@/features/transactions/transaction-dialog";
 import { formatCurrency, formatDate, formatCompactCurrency } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Overview" };
@@ -41,22 +41,10 @@ function Delta({ value, inverse = false }: { value: number | null; inverse?: boo
   return (
     <span className={cn("inline-flex items-center gap-0.5 text-[12px] font-medium", positive ? "text-income" : "text-expense")}>
       <Icon className="size-3.5" />
-                <div className="flex items-center gap-1">
-                  {[1, 3, 6].map((p) => (
-                    <Link
-                      key={p}
-                      href={`?chartPeriod=${p}`}
-                      className={cn(
-                        "rounded px-2 py-0.5 text-[11px] font-medium transition-colors",
-                        period === p
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-elevated"
-                      )}
-                    >
-                      {p}M
-                    </Link>
-                  ))}
-                </div>
+      {Math.abs(value).toFixed(1)}% from last 7 days
+    </span>
+  );
+}
 
 function MetricCard({
   label,
@@ -92,11 +80,13 @@ function MetricCard({
 export default async function DashboardPage(props: { searchParams: Promise<Record<string, string>> }) {
   const session = await verifySession();
   const searchParams = await props.searchParams;
+
   const canEdit = canWriteTransactions(session.role);
+  const categoryList = canEdit ? await listCategories(session.organizationId) : [];
+
   const chartPeriod = Number(searchParams.chartPeriod) || 6;
   const validPeriods = [1, 3, 6];
   const period = validPeriods.includes(chartPeriod) ? chartPeriod : 6;
-  const categoryList = canEdit ? await listCategories(session.organizationId) : [];
 
   const [[org], summary] = await Promise.all([
     db.select({ name: organizations.name, baseCurrency: organizations.baseCurrency })
@@ -113,8 +103,8 @@ export default async function DashboardPage(props: { searchParams: Promise<Recor
   );
 
   const months = disp.monthlyTotals.slice(-period);
-  const cur = months.at(-1);
-  const prev = months.at(-2);
+  const cur = disp.monthlyTotals.at(-1);
+  const prev = disp.monthlyTotals.at(-2);
   const incomeChg = cur && prev ? pct(cur.income, prev.income) : null;
   const expChg = cur && prev ? pct(cur.expense, prev.expense) : null;
   const netChg = cur && prev ? pct(cur.income - cur.expense, prev.income - prev.expense) : null;
@@ -132,13 +122,12 @@ export default async function DashboardPage(props: { searchParams: Promise<Recor
     { value: riskSummary.counts.HIGH ?? 0,     color: "#ea580c", label: "High" },
     { value: riskSummary.counts.MEDIUM ?? 0,   color: "#d97706", label: "Medium" },
     { value: riskSummary.counts.LOW ?? 0,      color: "#16a34a", label: "Low" },
-
   ].filter((s) => s.value > 0);
 
   return (
     <div className="w-full px-4 py-4 sm:px-6">
       {/* Page header */}
-      <div className="mb-4 flex items-start justify-between gap-3">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-[18px] font-semibold tracking-tight">Overview</h1>
           <p className="mt-0.5 text-[13px] text-muted-foreground">
@@ -156,7 +145,7 @@ export default async function DashboardPage(props: { searchParams: Promise<Recor
 
       {rateUnavailable && (
         <div className="mb-4 rounded-md border border-border bg-elevated px-4 py-2.5 text-[12px] text-muted-foreground">
-          Showing totals in {baseCurrency} -- exchange rate to {session.displayCurrency} unavailable.
+          Showing totals in {baseCurrency} — exchange rate to {session.displayCurrency} unavailable.
         </div>
       )}
 
@@ -190,10 +179,21 @@ export default async function DashboardPage(props: { searchParams: Promise<Recor
             <Card className="lg:col-span-2">
               <CardHeader className="flex-row items-center justify-between pb-0">
                 <CardTitle>Cash Flow Trend</CardTitle>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-muted-foreground">Last 6 months</span>
-                  <button className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-elevated">
-                  </button>
+                <div className="flex items-center gap-1">
+                  {[1, 3, 6].map((p) => (
+                    <Link
+                      key={p}
+                      href={`?chartPeriod=${p}`}
+                      className={cn(
+                        "rounded px-2 py-0.5 text-[11px] font-medium transition-colors",
+                        period === p
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-elevated"
+                      )}
+                    >
+                      {p}M
+                    </Link>
+                  ))}
                 </div>
               </CardHeader>
               <CardContent className="pt-3">
@@ -201,12 +201,10 @@ export default async function DashboardPage(props: { searchParams: Promise<Recor
               </CardContent>
             </Card>
 
-            {/* Risk overview - 1/3 â€” donut chart replaces progress bars */}
+            {/* Risk overview - 1/3 */}
             <Card>
               <CardHeader className="flex-row items-center justify-between pb-0">
                 <CardTitle>Risk Overview</CardTitle>
-                <button className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-elevated">
-                </button>
               </CardHeader>
               <CardContent className="pt-3">
                 {riskSummary.totalAnalyzed === 0 ? (
@@ -242,7 +240,6 @@ export default async function DashboardPage(props: { searchParams: Promise<Recor
                       <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Category</th>
                       <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Amount</th>
                       <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Risk</th>
-                      <th className="px-5 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -262,9 +259,6 @@ export default async function DashboardPage(props: { searchParams: Promise<Recor
                               {t.riskLevel.charAt(0) + t.riskLevel.slice(1).toLowerCase()}
                             </Badge>
                           ) : <span className="text-muted-foreground/40">--</span>}
-                        </td>
-                        <td className="px-5 py-2.5">
-                          <Badge variant="secondary">Completed</Badge>
                         </td>
                       </tr>
                     ))}
@@ -332,7 +326,7 @@ export default async function DashboardPage(props: { searchParams: Promise<Recor
           {/* Forecast strip */}
           {forecastSummary && forecastSummary.confidence !== "INSUFFICIENT" && (
             <Card className="mt-4">
-              <CardContent className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:gap-10">
+              <CardContent className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:gap-10">
                 <div>
                   <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Current cash</p>
                   <p className="mt-0.5 text-[18px] font-semibold tabular-nums">
@@ -366,5 +360,3 @@ export default async function DashboardPage(props: { searchParams: Promise<Recor
     </div>
   );
 }
-
-
