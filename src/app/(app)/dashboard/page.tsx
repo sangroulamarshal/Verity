@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { eq } from "drizzle-orm";
 import {
@@ -12,7 +12,7 @@ import {
 import { db } from "@/db/client";
 import { organizations } from "@/db/schema";
 import { verifySession } from "@/server/services/session";
-import { getDashboardSummary } from "@/server/services/dashboard";
+import { getDashboardSummary, getDailyTotals } from "@/server/services/dashboard";
 import { resolveDisplaySummary } from "@/server/services/dashboard-display";
 import { getRiskSummary } from "@/server/services/risk";
 import { getForecastSummary } from "@/server/services/forecast";
@@ -88,10 +88,11 @@ export default async function DashboardPage(props: { searchParams: Promise<Recor
   const validPeriods = [1, 3, 6];
   const period = validPeriods.includes(chartPeriod) ? chartPeriod : 6;
 
-  const [[org], summary] = await Promise.all([
+  const [[org], summary, dailyTotals] = await Promise.all([
     db.select({ name: organizations.name, baseCurrency: organizations.baseCurrency })
       .from(organizations).where(eq(organizations.id, session.organizationId)).limit(1),
     getDashboardSummary(session.organizationId),
+    period === 1 ? getDailyTotals(session.organizationId, 30) : Promise.resolve([]),
   ]);
 
   const riskSummary = await getRiskSummary(session.organizationId);
@@ -102,7 +103,10 @@ export default async function DashboardPage(props: { searchParams: Promise<Recor
     summary, baseCurrency, session.displayCurrency ?? baseCurrency
   );
 
-  const months = disp.monthlyTotals.slice(-period);
+  const months = period === 1
+    ? dailyTotals.map((d) => ({ month: d.date, income: d.income, expense: d.expense }))
+    : disp.monthlyTotals.slice(-period);
+  const chartIsDaily = period === 1;
   const cur = disp.monthlyTotals.at(-1);
   const prev = disp.monthlyTotals.at(-2);
   const incomeChg = cur && prev ? pct(cur.income, prev.income) : null;
@@ -197,7 +201,7 @@ export default async function DashboardPage(props: { searchParams: Promise<Recor
                 </div>
               </CardHeader>
               <CardContent className="pt-3">
-                <CashFlowChart data={months} />
+                <CashFlowChart data={months} daily={chartIsDaily} />
               </CardContent>
             </Card>
 

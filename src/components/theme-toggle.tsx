@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { Moon, Sun, Monitor, ChevronDown } from "lucide-react";
@@ -27,8 +27,7 @@ export function ThemeToggle() {
           const active = theme === value;
           return (
             <DropdownMenuItem key={value} onClick={() => setTheme(value)} className={active ? "text-primary font-medium" : ""}>
-              <Icon className="mr-2 size-4 shrink-0" />
-              <span className="flex-1">{label}</span>
+              <Icon className="mr-2 size-4 shrink-0" /><span className="flex-1">{label}</span>
               {active && <span className="ml-2 size-1.5 rounded-full bg-primary inline-block shrink-0" />}
             </DropdownMenuItem>
           );

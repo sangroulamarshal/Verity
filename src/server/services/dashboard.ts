@@ -98,3 +98,34 @@ export async function getDashboardSummary(organizationId: string): Promise<Dashb
     recentTransactions,
   };
 }
+
+export interface DailyTotal {
+  date: string;
+  income: number;
+  expense: number;
+}
+
+export async function getDailyTotals(
+  organizationId: string,
+  days: number = 30
+): Promise<DailyTotal[]> {
+  const rows = await db
+    .select({
+      date: sql<string>`to_char(${transactions.date}, 'YYYY-MM-DD')`,
+      income: sql<string>`coalesce(sum(${transactions.baseAmount}) filter (where ${transactions.type} = 'INCOME'), 0)`,
+      expense: sql<string>`coalesce(sum(${transactions.baseAmount}) filter (where ${transactions.type} = 'EXPENSE'), 0)`,
+    })
+    .from(transactions)
+    .where(
+      sql`${transactions.organizationId} = ${organizationId}
+        AND ${transactions.date} >= current_date - interval '${sql.raw(String(days))} days'`
+    )
+    .groupBy(sql`to_char(${transactions.date}, 'YYYY-MM-DD')`)
+    .orderBy(sql`to_char(${transactions.date}, 'YYYY-MM-DD') asc`);
+
+  return rows.map((row) => ({
+    date: row.date,
+    income: Number(row.income),
+    expense: Number(row.expense),
+  }));
+}

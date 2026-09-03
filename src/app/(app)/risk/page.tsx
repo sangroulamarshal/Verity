@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ShieldAlert, ShieldCheck, MoreHorizontal, Search } from "lucide-react";
 import { verifySession } from "@/server/services/session";
@@ -150,8 +150,8 @@ export default async function RiskPage(props: PageProps<"/risk">) {
                   </button>
                 </div>
               </CardHeader>
-              <CardContent className="pt-4 flex justify-center">
-                <RiskDonutChart total={riskTotal} segments={riskSegments} />
+              <CardContent className="pt-2">
+                <RiskDonutChart total={riskTotal} segments={riskSegments} compact />
               </CardContent>
             </Card>
 

@@ -1,11 +1,9 @@
-﻿import * as React from "react";
+import * as React from "react";
 import { cn } from "@/lib/utils";
 
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
-    <input
-      type={type}
-      data-slot="input"
+    <input type={type} data-slot="input"
       className={cn(
         "flex h-8 w-full appearance-none rounded-md border border-input bg-transparent",
         "px-3 py-1.5 text-[13px] shadow-none transition-colors",
@@ -16,9 +14,7 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
         "dark:[&::-webkit-calendar-picker-indicator]:invert dark:[&::-webkit-calendar-picker-indicator]:opacity-80",
         "aria-[invalid=true]:border-destructive aria-[invalid=true]:focus-visible:ring-destructive",
         className
-      )}
-      {...props}
-    />
+      )} {...props} />
   );
 }
 
