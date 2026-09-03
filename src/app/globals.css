@@ -1,33 +1,24 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Verity design tokens -- Round 1 UI overhaul.
+ * Verity design tokens
  *
- * Dark-first. The screenshots define the target:
- *   #050505  bg-background  (true black base)
- *   #0A0A0A  bg-surface     (cards, panels)
- *   #171717  bg-elevated    (hovered rows, dropdowns)
- *   #262626  border         (all dividers)
- *   #FAFAFA  foreground     (primary text)
- *   #A3A3A3  muted-fg       (secondary text)
- *   #60A5FA  accent         (active nav, primary actions, links)
- *
- * Financial semantic colors (never used for decoration):
- *   green  income / positive
- *   red    expense / negative / destructive
- *   orange risk-high / warning
- *   amber  risk-medium
- *
- * Typography: Inter Variable (body/UI) + IBM Plex Mono (amounts/IDs).
- * Both self-hosted via @fontsource -- no external network calls.
+ * Dark mode:
+ *   #050505  bg-background
+ *   #0A0A0A  bg-surface / bg-sidebar (unified)
+ *   #171717  bg-elevated
+ *   #262626  border
+ *   #FAFAFA  foreground
+ *   #A3A3A3  muted-fg
+ *   #60A5FA  accent
  */
 
 :root {
   --radius: 0.375rem;
 
-  /* Light mode -- clean institutional white */
+  /* Light mode */
   --background:         #f0f2f5;
   --surface:            #ffffff;
   --elevated:           #e8edf2;
@@ -38,9 +29,10 @@
   --card:               #ffffff;
   --card-foreground:    #080d14;
 
-  --sidebar:            #1a2332;
-  --sidebar-foreground: #f0f4f8;
-  --sidebar-border:     #253044;
+  /* Sidebar stays dark in light mode — intentional contrast */
+  --sidebar:            #0f1623;
+  --sidebar-foreground: #e8edf2;
+  --sidebar-border:     #1e2a3a;
   --sidebar-active:            #2563eb;
   --sidebar-active-foreground: #ffffff;
 
@@ -67,7 +59,11 @@
   --input:              #d1dbe8;
   --ring:               #2563eb;
 
-  /* Severity -- never decorative */
+  /* Chart tokens */
+  --chart-grid:         #e5e7eb;
+  --chart-tick:         #4b5563;
+
+  /* Severity */
   --risk-low:           #16a34a;
   --risk-medium:        #d97706;
   --risk-high:          #ea580c;
@@ -79,7 +75,6 @@
 }
 
 .dark {
-  /* Exact tokens from the reference screenshots */
   --background:         #050505;
   --surface:            #0a0a0a;
   --elevated:           #171717;
@@ -90,6 +85,7 @@
   --card:               #0a0a0a;
   --card-foreground:    #fafafa;
 
+  /* Sidebar matches the dashboard surface exactly in dark mode */
   --sidebar:            #0a0a0a;
   --sidebar-foreground: #fafafa;
   --sidebar-border:     #1a1a1a;
@@ -118,6 +114,10 @@
   --border:             #262626;
   --input:              #1f1f1f;
   --ring:               #60a5fa;
+
+  /* Chart tokens */
+  --chart-grid:         rgba(255,255,255,0.07);
+  --chart-tick:         #a3a3a3;
 
   /* Severity */
   --risk-low:           #4ade80;
@@ -171,8 +171,6 @@
   --radius-lg: calc(var(--radius) + 2px);
   --radius-xl: calc(var(--radius) + 6px);
 
-  /* Inter variable -- matches the sidebar screenshot reference.
-     * Falls back to system-ui which is also geometric on macOS/iOS/Android. */
   --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
 }
@@ -189,7 +187,6 @@
   }
 }
 
-/* Scrollbar styling for the sidebar and main pane in dark mode */
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;

@@ -169,7 +169,7 @@ function NavLink({
         "group flex items-center gap-2.5 rounded-md py-1.5 pl-3 pr-2.5 text-[13px] transition-colors duration-150",
         active
           ? "bg-sidebar-active text-sidebar-active-foreground font-medium"
-          : "text-white/60 hover:bg-white/[0.08] hover:text-white/90"
+          : "text-sidebar-foreground/60 hover:bg-sidebar-foreground/[0.06] hover:text-sidebar-foreground/90"
       )}
     >
       <Icon
@@ -177,7 +177,7 @@ function NavLink({
           "size-[14px] shrink-0 transition-colors duration-150",
           active
             ? "text-sidebar-active-foreground opacity-90"
-            : "text-white/40 group-hover:text-white/70"
+            : "text-sidebar-foreground/35 group-hover:text-sidebar-foreground/65"
         )}
       />
       <span className="truncate">{item.label}</span>
@@ -211,7 +211,7 @@ function SidebarNavGroup({
             <button
               type="button"
               onClick={() => setCollapsed((c) => !c)}
-              className="flex w-full items-center justify-between text-[10px] font-semibold uppercase tracking-widest text-white/25 hover:text-white/45 transition-colors"
+              className="flex w-full items-center justify-between text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/25 hover:text-sidebar-foreground/45 transition-colors"
             >
               {group.label}
               <ChevronDown
@@ -222,7 +222,7 @@ function SidebarNavGroup({
               />
             </button>
           ) : (
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-white/25">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/25">
               {group.label}
             </p>
           )}
@@ -249,7 +249,7 @@ function Brand() {
     <Link href="/dashboard" className="flex items-center gap-2.5 px-4">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/logo-mark.png" alt="" width={24} height={24} className="size-6 shrink-0" />
-      <span className="text-[14px] font-bold tracking-widest text-white/90 uppercase">
+      <span className="text-[14px] font-bold tracking-widest text-sidebar-foreground/90 uppercase">
         Verity
       </span>
     </Link>
@@ -258,11 +258,11 @@ function Brand() {
 
 function WorkspaceBox({ orgName }: { orgName: string }) {
   return (
-    <div className="mx-3 mt-3 rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2.5">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-white/35 mb-0.5">
+    <div className="mx-3 mt-3 rounded-md border border-sidebar-foreground/10 bg-sidebar-foreground/[0.04] px-3 py-2.5">
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/30 mb-0.5">
         Organisation
       </p>
-      <p className="truncate text-[12px] font-medium text-white/80">{orgName}</p>
+      <p className="truncate text-[12px] font-medium text-sidebar-foreground/75">{orgName}</p>
     </div>
   );
 }
@@ -306,7 +306,7 @@ export function AppShell({
   const sidebarContent = (onNavigate?: () => void) => (
     <>
       <WorkspaceBox orgName={orgName} />
-      <div className="mx-3 mt-2 mb-0 border-t border-white/[0.07]" />
+      <div className="mx-3 mt-2 border-t border-sidebar-foreground/[0.07]" />
       <div className="flex-1 overflow-y-auto scrollbar-thin mt-2">
         {NAV_GROUPS.map((group, i) => (
           <SidebarNavGroup
@@ -318,17 +318,17 @@ export function AppShell({
         ))}
         <div className="h-6" />
       </div>
-      <div className="border-t border-white/[0.07] px-3 py-3">
+      <div className="border-t border-sidebar-foreground/[0.07] px-3 py-3">
         <Link
           href="/settings/account"
           onClick={onNavigate}
-          className="flex items-center gap-2 text-[12px] text-white/35 hover:text-white/60 transition-colors"
+          className="flex items-center gap-2 text-[12px] text-sidebar-foreground/30 hover:text-sidebar-foreground/60 transition-colors"
         >
           <HelpCircle className="size-3.5 shrink-0" />
           Help &amp; Support
         </Link>
       </div>
-      <div className="border-t border-white/[0.07] px-3 py-2.5">
+      <div className="border-t border-sidebar-foreground/[0.07] px-3 py-2.5">
         <UserMenu email={email} fullName={fullName} role={role} logoutAction={logoutAction} sidebar />
       </div>
     </>
@@ -336,19 +336,15 @@ export function AppShell({
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
-      <aside
-        className="hidden w-[220px] shrink-0 flex-col md:flex"
-        style={{ background: "#111827", borderRight: "1px solid rgba(255,255,255,0.07)" }}
-      >
-        <div
-          className="flex h-[52px] shrink-0 items-center"
-          style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
-        >
+      {/* Desktop sidebar — bg-sidebar token drives colour in both themes */}
+      <aside className="hidden w-[220px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:flex">
+        <div className="flex h-[52px] shrink-0 items-center border-b border-sidebar-foreground/[0.07]">
           <Brand />
         </div>
         {sidebarContent()}
       </aside>
 
+      {/* Mobile overlay */}
       {mobileNavOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <button
@@ -357,19 +353,13 @@ export function AppShell({
             className="absolute inset-0 bg-black/60"
             onClick={() => setMobileNavOpen(false)}
           />
-          <aside
-            className="relative flex h-full w-[220px] flex-col"
-            style={{ background: "#111827", borderRight: "1px solid rgba(255,255,255,0.07)" }}
-          >
-            <div
-              className="flex h-[52px] shrink-0 items-center justify-between pr-2"
-              style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
-            >
+          <aside className="relative flex h-full w-[220px] flex-col border-r border-sidebar-border bg-sidebar">
+            <div className="flex h-[52px] shrink-0 items-center justify-between border-b border-sidebar-foreground/[0.07] pr-2">
               <Brand />
               <button
                 type="button"
                 aria-label="Close"
-                className="flex size-8 items-center justify-center rounded-md text-white/40 hover:bg-white/10 hover:text-white/70"
+                className="flex size-8 items-center justify-center rounded-md text-sidebar-foreground/40 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground/70"
                 onClick={() => setMobileNavOpen(false)}
               >
                 <X className="size-4" />
@@ -380,6 +370,7 @@ export function AppShell({
         </div>
       )}
 
+      {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <header className="flex h-[52px] shrink-0 items-center gap-2 border-b border-border bg-surface px-4">
           <button
@@ -402,7 +393,7 @@ export function AppShell({
             >
               <Search className="size-3.5 shrink-0 text-muted-foreground/50" />
               <span className="flex-1 text-[12px] text-muted-foreground/50">
-                Search transactions, customers, invoices…
+                Search transactions, customers, invoices...
               </span>
               <kbd className="rounded bg-border/60 px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground/40">
                 {"\u2318"}K
