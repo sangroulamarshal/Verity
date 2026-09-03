@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 
 import * as React from "react";
@@ -409,12 +409,16 @@ export function AppShell({
             <UserMenu email={email} fullName={fullName} role={role} logoutAction={logoutAction} />
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto scrollbar-thin bg-background">
+        <main className="flex flex-col flex-1 overflow-y-auto scrollbar-thin bg-background">
           {children}
+          <footer className="mt-auto border-t border-border px-6 py-3 text-center text-[11px] text-muted-foreground">
+            © 2026 Verity. All rights reserved.{" "}
+            <Link href="/terms" className="underline underline-offset-2 hover:text-foreground transition-colors">Terms</Link>
+            {" · "}
+            <Link href="/privacy" className="underline underline-offset-2 hover:text-foreground transition-colors">Privacy</Link>
+          </footer>
         </main>
       </div>
     </div>
   );
 }
-
-
