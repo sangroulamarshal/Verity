@@ -126,19 +126,12 @@
 
 @layer base {
   * { @apply border-border outline-ring/50; }
-  body {
-    @apply bg-background text-foreground;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
+  body { @apply bg-background text-foreground; -webkit-font-smoothing: antialiased; }
   .tabular-nums { font-variant-numeric: tabular-nums; }
 }
 
 @layer utilities {
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
-  }
+  .scrollbar-thin { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
   .scrollbar-thin::-webkit-scrollbar { width: 4px; }
   .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
   .scrollbar-thin::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
