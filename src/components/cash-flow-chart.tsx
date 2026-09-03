@@ -44,7 +44,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export function CashFlowChart({ data }: CashFlowChartProps) {
   if (data.length === 0) {
     return (
-      <div className="flex h-40 flex-col items-center justify-center gap-1 text-center">
+      <div className="flex h-[280px] flex-col items-center justify-center gap-1 text-center">
         <p className="text-sm font-medium text-foreground">No activity yet</p>
         <p className="text-sm text-muted-foreground">Recorded income and expenses will appear here by month.</p>
       </div>
@@ -58,9 +58,9 @@ export function CashFlowChart({ data }: CashFlowChartProps) {
   }));
 
   return (
-    <div className="w-full" style={{ height: 240 }}>
+    <div className="w-full" style={{ height: 280 }}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartData} barCategoryGap="30%" barGap={3} margin={{ top: 4, right: 4, left: 8, bottom: 0 }}>
+        <BarChart data={chartData} barCategoryGap="30%" barGap={3} margin={{ top: 4, right: 8, left: 4, bottom: 0 }}>
           <CartesianGrid
             vertical={false}
             strokeDasharray="3 3"
@@ -78,7 +78,7 @@ export function CashFlowChart({ data }: CashFlowChartProps) {
             tickLine={false}
             tick={{ fontSize: 11, fill: "var(--chart-tick)" }}
             tickFormatter={formatK}
-            width={52}
+            width={60}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--elevated)", fillOpacity: 0.6 }} />
           <Legend
@@ -86,8 +86,8 @@ export function CashFlowChart({ data }: CashFlowChartProps) {
             iconSize={8}
             wrapperStyle={{ fontSize: 12, paddingTop: 8, color: "var(--chart-tick)" }}
           />
-          <Bar dataKey="Income" fill="var(--income)" radius={[3, 3, 0, 0]} maxBarSize={24} />
-          <Bar dataKey="Expenses" fill="var(--expense)" radius={[3, 3, 0, 0]} maxBarSize={24} fillOpacity={0.8} />
+          <Bar dataKey="Income" fill="var(--income)" radius={[3, 3, 0, 0]} maxBarSize={28} />
+          <Bar dataKey="Expenses" fill="var(--expense)" radius={[3, 3, 0, 0]} maxBarSize={28} fillOpacity={0.8} />
         </BarChart>
       </ResponsiveContainer>
     </div>

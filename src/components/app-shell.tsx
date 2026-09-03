@@ -153,10 +153,10 @@ function NavLink({
 
   if (!live) {
     return (
-      <span className="group flex items-center gap-2.5 rounded-md py-1.5 pl-3 pr-2.5 text-[13px] text-muted-foreground/35 cursor-default select-none">
-        <Icon className="size-[14px] shrink-0 opacity-30" />
+      <span className="group flex items-center gap-2.5 rounded-md py-1.5 pl-3 pr-2.5 text-[13px] text-sidebar-foreground/25 cursor-default select-none">
+        <Icon className="size-[14px] shrink-0 opacity-25" />
         {item.label}
-        <span className="ml-auto text-[10px] text-muted-foreground/25 font-mono">soon</span>
+        <span className="ml-auto text-[10px] text-sidebar-foreground/20 font-mono">soon</span>
       </span>
     );
   }
@@ -170,14 +170,15 @@ function NavLink({
         "group flex items-center gap-2.5 rounded-md py-1.5 pl-3 pr-2.5 text-[13px] transition-colors duration-150",
         active
           ? "bg-sidebar-active text-sidebar-active-foreground font-medium"
-          : "text-muted-foreground hover:bg-elevated hover:text-foreground"
+          : "text-sidebar-foreground/70 hover:bg-white/10 hover:text-sidebar-foreground"
       )}
     >
-
       <Icon
         className={cn(
           "size-[14px] shrink-0 transition-colors duration-150",
-          active ? "text-primary" : "text-muted-foreground/50 group-hover:text-muted-foreground"
+          active
+            ? "text-sidebar-active-foreground"
+            : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/80"
         )}
       />
       <span className="truncate">{item.label}</span>
@@ -214,7 +215,7 @@ function SidebarNavGroup({
             <button
               type="button"
               onClick={() => setCollapsed((c) => !c)}
-              className="flex w-full items-center justify-between text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 hover:text-muted-foreground/60 transition-colors"
+              className="flex w-full items-center justify-between text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/30 hover:text-sidebar-foreground/50 transition-colors"
             >
               {group.label}
               <ChevronDown
@@ -225,7 +226,7 @@ function SidebarNavGroup({
               />
             </button>
           ) : (
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/30">
               {group.label}
             </p>
           )}
@@ -252,7 +253,7 @@ function Brand() {
     <Link href="/dashboard" className="flex items-center gap-2.5 px-3">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/logo-mark.png" alt="" width={26} height={26} className="size-[26px] shrink-0" />
-      <span className="text-[15px] font-bold tracking-tight text-foreground">
+      <span className="text-[15px] font-bold tracking-tight text-sidebar-foreground">
         VERITY
       </span>
     </Link>
@@ -261,12 +262,11 @@ function Brand() {
 
 function WorkspaceBox({ orgName }: { orgName: string }) {
   return (
-    <div className="mx-3 mt-3 rounded-md border border-border bg-elevated/60 px-2.5 py-2">
-      <p className="truncate text-[12px] font-medium text-foreground/90">{orgName}</p>
+    <div className="mx-3 mt-3 mb-1 rounded-md border border-white/10 bg-white/5 px-2.5 py-2">
+      <p className="truncate text-[12px] font-medium text-sidebar-foreground/80">{orgName}</p>
     </div>
   );
 }
-
 
 interface AppShellProps {
   notifications?: NotificationItem[];
@@ -307,6 +307,8 @@ export function AppShell({
   const sidebarContent = (onNavigate?: () => void) => (
     <>
       <WorkspaceBox orgName={orgName} />
+      {/* Divider between org box and nav */}
+      <div className="mx-3 mb-1 border-t border-white/10" />
       <div className="flex-1 overflow-y-auto scrollbar-thin mt-1">
         {NAV_GROUPS.map((group, i) => (
           <SidebarNavGroup
@@ -318,17 +320,17 @@ export function AppShell({
         ))}
         <div className="h-4" />
       </div>
-      <div className="border-t border-sidebar-border px-3 py-3">
+      <div className="border-t border-white/10 px-3 py-3">
         <Link
           href="/settings/account"
           onClick={onNavigate}
-          className="flex items-center gap-2 text-[12px] text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors"
+          className="flex items-center gap-2 text-[12px] text-sidebar-foreground/40 hover:text-sidebar-foreground/70 transition-colors"
         >
           <HelpCircle className="size-3.5" />
           Help &amp; Support
         </Link>
       </div>
-      <div className="border-t border-sidebar-border px-3 py-2.5">
+      <div className="border-t border-white/10 px-3 py-2.5">
         <UserMenu email={email} fullName={fullName} role={role} logoutAction={logoutAction} sidebar />
       </div>
     </>
@@ -338,7 +340,7 @@ export function AppShell({
     <div className="flex h-dvh overflow-hidden bg-background">
       {/* Desktop sidebar */}
       <aside className="hidden w-[220px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
-        <div className="flex h-[52px] shrink-0 items-center border-b border-sidebar-border">
+        <div className="flex h-[52px] shrink-0 items-center border-b border-white/10">
           <Brand />
         </div>
         {sidebarContent()}
@@ -354,12 +356,12 @@ export function AppShell({
             onClick={() => setMobileNavOpen(false)}
           />
           <aside className="relative flex h-full w-[220px] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-            <div className="flex h-[52px] shrink-0 items-center justify-between border-b border-sidebar-border pr-2">
+            <div className="flex h-[52px] shrink-0 items-center justify-between border-b border-white/10 pr-2">
               <Brand />
               <button
                 type="button"
                 aria-label="Close"
-                className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-elevated"
+                className="flex size-8 items-center justify-center rounded-md text-sidebar-foreground/50 hover:bg-white/10"
                 onClick={() => setMobileNavOpen(false)}
               >
                 <X className="size-4" />
@@ -401,7 +403,6 @@ export function AppShell({
 
           <div className="flex items-center gap-1">
             <NotificationsPanel notifications={notifications} />
-
             <div className="mx-1 h-5 w-px bg-border" />
             <CurrencySelector value={displayCurrency} />
             <ThemeToggle />

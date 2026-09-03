@@ -18,8 +18,10 @@ function shortDate(iso: string): string {
 }
 
 function formatK(value: number) {
-  if (Math.abs(value) >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-  if (Math.abs(value) >= 1_000) return `${(value / 1_000).toFixed(0)}K`;
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (abs >= 10_000) return `${(value / 1_000).toFixed(0)}K`;
+  if (abs >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
   return String(Math.round(value));
 }
 
@@ -45,7 +47,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export function ForecastChart({ days, openingBalance, historicalDays = [] }: ForecastChartProps) {
   if (days.length === 0) {
-    return <div className="flex h-44 items-center justify-center text-sm text-muted-foreground">No forecast data available.</div>;
+    return <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">No forecast data available.</div>;
   }
 
   const allData = [
@@ -54,7 +56,7 @@ export function ForecastChart({ days, openingBalance, historicalDays = [] }: For
     ...days.map((d) => ({ date: shortDate(d.date), Actual: null as number | null, Projected: d.projectedBalance })),
   ];
 
-  const step = Math.max(1, Math.floor(allData.length / 6));
+  const step = Math.max(1, Math.floor(allData.length / 8));
   const tickFormatter = (_: string, index: number) => index % step === 0 ? (allData[index]?.date ?? "") : "";
 
   const allBalances = [...historicalDays.map((h) => h.balance), openingBalance, ...days.map((d) => d.projectedBalance)];
@@ -69,9 +71,9 @@ export function ForecastChart({ days, openingBalance, historicalDays = [] }: For
   const yMax = maxBal + padding;
 
   return (
-    <div className="w-full" style={{ height: 260 }}>
+    <div className="w-full" style={{ height: 300 }}>
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={allData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+        <AreaChart data={allData} margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>
           <defs>
             <linearGradient id="gradActual" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="var(--foreground-muted)" stopOpacity={0.15} />
@@ -101,7 +103,7 @@ export function ForecastChart({ days, openingBalance, historicalDays = [] }: For
             tickLine={false}
             tick={{ fontSize: 11, fill: "var(--chart-tick)" }}
             tickFormatter={formatK}
-            width={56}
+            width={68}
             domain={[yMin, yMax]}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--chart-tick)", strokeOpacity: 0.3, strokeWidth: 1 }} />

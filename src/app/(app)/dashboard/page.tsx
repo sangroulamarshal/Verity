@@ -185,7 +185,7 @@ export default async function DashboardPage(props: { searchParams: Promise<Recor
                       key={p}
                       href={`?chartPeriod=${p}`}
                       className={cn(
-                        "rounded px-2 py-0.5 text-[11px] font-medium transition-colors",
+                        "rounded px-2.5 py-1 text-[11px] font-medium transition-colors",
                         period === p
                           ? "bg-primary text-primary-foreground"
                           : "text-muted-foreground hover:text-foreground hover:bg-elevated"
