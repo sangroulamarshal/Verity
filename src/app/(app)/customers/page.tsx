@@ -123,128 +123,117 @@ export default async function CustomersPage(props: PageProps<"/customers">) {
           <CustomerSearch />
         </div>
         {/* Risk level filter — server-side via URL param */}
-        <div className="relative">
-          <select
-            defaultValue={riskLevel ?? ""}
-            onChange={(e) => {
-              // Client navigation — form submission would need a client
-              // component; a plain anchor list avoids that dependency.
-            }}
-            className="hidden"
-          />
-          <div className="flex items-center gap-0.5 rounded-md border border-border bg-surface">
-            {RISK_LEVELS.map(({ value, label }) => (
-              <Link
-                key={value}
-                href={filterHref(value)}
-                className={cn(
-                  "px-3 py-1.5 text-[12px] transition-colors rounded-md",
-                  (riskLevel ?? "") === value
-                    ? "bg-primary text-primary-foreground font-medium"
-                    : "text-muted-foreground hover:text-foreground hover:bg-elevated"
-                )}
-              >
-                {label}
-              </Link>
-            ))}
-          </div>
+        <div className="flex items-center gap-0.5 rounded-md border border-border bg-surface">
+          {RISK_LEVELS.map(({ value, label }) => (
+            <Link
+              key={value}
+              href={filterHref(value)}
+              className={cn(
+                "px-3 py-1.5 text-[12px] transition-colors rounded-md",
+                (riskLevel ?? "") === value
+                  ? "bg-primary text-primary-foreground font-medium"
+                  : "text-muted-foreground hover:text-foreground hover:bg-elevated"
+              )}
+            >
+              {label}
+            </Link>
+          ))}
         </div>
       </div>
 
       {/* Table */}
       <div className="rounded-[6px] border border-border bg-surface overflow-hidden">
         <div className="overflow-x-auto">
-        <table className="w-full text-[13px] border-collapse">
-          <thead className="border-b border-border bg-elevated/30">
-            <tr>
-              <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                <Link href={sortHref("name")} className="hover:text-foreground transition-colors">
-                  Customer <SortIcon col="name" />
-                </Link>
-              </th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Contact</th>
-              <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Transactions</th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Risk</th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                <Link href={sortHref("updatedAt")} className="hover:text-foreground transition-colors">
-                  Last Activity <SortIcon col="updatedAt" />
-                </Link>
-              </th>
-              <th className="w-10 px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
+          <table className="w-full text-[13px] border-collapse">
+            <thead className="border-b border-border bg-elevated/30">
               <tr>
-                <td colSpan={6} className="px-5 py-16 text-center text-[13px] text-muted-foreground">
-                  {riskLevel
-                    ? `No customers with ${RISK_BADGE_LABEL[riskLevel]} risk.`
-                    : search
-                    ? "No customers match that search."
-                    : "No customers yet. Add your first customer to get started."}
-                </td>
+                <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                  <Link href={sortHref("name")} className="hover:text-foreground transition-colors">
+                    Customer <SortIcon col="name" />
+                  </Link>
+                </th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Contact</th>
+                <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Transactions</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Risk</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                  <Link href={sortHref("updatedAt")} className="hover:text-foreground transition-colors">
+                    Last Activity <SortIcon col="updatedAt" />
+                  </Link>
+                </th>
+                <th className="w-10 px-4 py-3" />
               </tr>
-            ) : (
-              rows.map((customer) => (
-                <tr key={customer.id} className="border-b border-border/50 hover:bg-elevated/40 transition-colors last:border-0">
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar name={customer.name} size="sm" />
-                      <div className="min-w-0">
-                        <Link
-                          href={`/customers/${customer.id}`}
-                          className="truncate text-[13px] font-medium hover:text-primary transition-colors block"
-                        >
-                          {customer.name}
-                        </Link>
-                        {customer.notes && (
-                          <p className="text-[11px] text-muted-foreground/60 truncate max-w-[180px]">
-                            {customer.notes}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="text-[12px] text-muted-foreground">
-                      {customer.email && <p className="truncate max-w-[180px]">{customer.email}</p>}
-                      {customer.phone && <p>{customer.phone}</p>}
-                      {!customer.email && !customer.phone && <span className="text-muted-foreground/40">--</span>}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">--</td>
-                  <td className="px-4 py-3">
-                    {customer.topRiskLevel ? (
-                      <Link href={filterHref(customer.topRiskLevel)}>
-                        <Badge variant={RISK_BADGE_VARIANT[customer.topRiskLevel]}>
-                          {RISK_BADGE_LABEL[customer.topRiskLevel]}
-                        </Badge>
-                      </Link>
-                    ) : (
-                      <span className="text-[12px] text-muted-foreground/40">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-[12px] text-muted-foreground">
-                    {customer.updatedAt
-                      ? formatDate(new Date(customer.updatedAt).toISOString().slice(0, 10))
-                      : "--"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <Link
-                        href={`/customers/${customer.id}`}
-                        className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-elevated hover:text-foreground"
-                      >
-                        <MoreHorizontal className="size-4" />
-                      </Link>
-                    </div>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-5 py-16 text-center text-[13px] text-muted-foreground">
+                    {riskLevel
+                      ? `No customers with ${RISK_BADGE_LABEL[riskLevel]} risk.`
+                      : search
+                      ? "No customers match that search."
+                      : "No customers yet. Add your first customer to get started."}
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-
+              ) : (
+                rows.map((customer) => (
+                  <tr key={customer.id} className="border-b border-border/50 hover:bg-elevated/40 transition-colors last:border-0">
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={customer.name} size="sm" />
+                        <div className="min-w-0">
+                          <Link
+                            href={`/customers/${customer.id}`}
+                            className="truncate text-[13px] font-medium hover:text-primary transition-colors block"
+                          >
+                            {customer.name}
+                          </Link>
+                          {customer.notes && (
+                            <p className="text-[11px] text-muted-foreground/60 truncate max-w-[180px]">
+                              {customer.notes}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-[12px] text-muted-foreground">
+                        {customer.email && <p className="truncate max-w-[180px]">{customer.email}</p>}
+                        {customer.phone && <p>{customer.phone}</p>}
+                        {!customer.email && !customer.phone && <span className="text-muted-foreground/40">--</span>}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">--</td>
+                    <td className="px-4 py-3">
+                      {customer.topRiskLevel ? (
+                        <Link href={filterHref(customer.topRiskLevel)}>
+                          <Badge variant={RISK_BADGE_VARIANT[customer.topRiskLevel]}>
+                            {RISK_BADGE_LABEL[customer.topRiskLevel]}
+                          </Badge>
+                        </Link>
+                      ) : (
+                        <span className="text-[12px] text-muted-foreground/40">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-[12px] text-muted-foreground">
+                      {customer.updatedAt
+                        ? formatDate(new Date(customer.updatedAt).toISOString().slice(0, 10))
+                        : "--"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <Link
+                          href={`/customers/${customer.id}`}
+                          className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-elevated hover:text-foreground"
+                        >
+                          <MoreHorizontal className="size-4" />
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
         {/* Pagination footer */}
         <div className="flex items-center justify-between border-t border-border px-5 py-2.5">
