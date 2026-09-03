@@ -1,6 +1,5 @@
 ﻿"use client";
 
-
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -153,10 +152,10 @@ function NavLink({
 
   if (!live) {
     return (
-      <span className="group flex items-center gap-2.5 rounded-md py-1.5 pl-3 pr-2.5 text-[13px] text-sidebar-foreground/25 cursor-default select-none">
-        <Icon className="size-[14px] shrink-0 opacity-25" />
+      <span className="group flex items-center gap-2.5 rounded-md py-1.5 pl-3 pr-2.5 text-[13px] cursor-default select-none opacity-30">
+        <Icon className="size-[14px] shrink-0" />
         {item.label}
-        <span className="ml-auto text-[10px] text-sidebar-foreground/20 font-mono">soon</span>
+        <span className="ml-auto text-[10px] font-mono">soon</span>
       </span>
     );
   }
@@ -170,15 +169,15 @@ function NavLink({
         "group flex items-center gap-2.5 rounded-md py-1.5 pl-3 pr-2.5 text-[13px] transition-colors duration-150",
         active
           ? "bg-sidebar-active text-sidebar-active-foreground font-medium"
-          : "text-sidebar-foreground/70 hover:bg-white/10 hover:text-sidebar-foreground"
+          : "text-white/60 hover:bg-white/[0.08] hover:text-white/90"
       )}
     >
       <Icon
         className={cn(
           "size-[14px] shrink-0 transition-colors duration-150",
           active
-            ? "text-sidebar-active-foreground"
-            : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/80"
+            ? "text-sidebar-active-foreground opacity-90"
+            : "text-white/40 group-hover:text-white/70"
         )}
       />
       <span className="truncate">{item.label}</span>
@@ -201,10 +200,7 @@ function SidebarNavGroup({
   onNavigate?: () => void;
 }) {
   const hasActive = group.items.some((i) => isActive(pathname, i.href));
-  const [collapsed, setCollapsed] = React.useState(
-    group.defaultCollapsed ?? false
-  );
-
+  const [collapsed, setCollapsed] = React.useState(group.defaultCollapsed ?? false);
   const showItems = !group.collapsible || !collapsed || hasActive;
 
   return (
@@ -215,7 +211,7 @@ function SidebarNavGroup({
             <button
               type="button"
               onClick={() => setCollapsed((c) => !c)}
-              className="flex w-full items-center justify-between text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/30 hover:text-sidebar-foreground/50 transition-colors"
+              className="flex w-full items-center justify-between text-[10px] font-semibold uppercase tracking-widest text-white/25 hover:text-white/45 transition-colors"
             >
               {group.label}
               <ChevronDown
@@ -226,7 +222,7 @@ function SidebarNavGroup({
               />
             </button>
           ) : (
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/30">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-white/25">
               {group.label}
             </p>
           )}
@@ -250,11 +246,11 @@ function SidebarNavGroup({
 
 function Brand() {
   return (
-    <Link href="/dashboard" className="flex items-center gap-2.5 px-3">
+    <Link href="/dashboard" className="flex items-center gap-2.5 px-4">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo-mark.png" alt="" width={26} height={26} className="size-[26px] shrink-0" />
-      <span className="text-[15px] font-bold tracking-tight text-sidebar-foreground">
-        VERITY
+      <img src="/logo-mark.png" alt="" width={24} height={24} className="size-6 shrink-0" />
+      <span className="text-[14px] font-bold tracking-widest text-white/90 uppercase">
+        Verity
       </span>
     </Link>
   );
@@ -262,8 +258,11 @@ function Brand() {
 
 function WorkspaceBox({ orgName }: { orgName: string }) {
   return (
-    <div className="mx-3 mt-3 mb-1 rounded-md border border-white/10 bg-white/5 px-2.5 py-2">
-      <p className="truncate text-[12px] font-medium text-sidebar-foreground/80">{orgName}</p>
+    <div className="mx-3 mt-3 rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2.5">
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-white/35 mb-0.5">
+        Organisation
+      </p>
+      <p className="truncate text-[12px] font-medium text-white/80">{orgName}</p>
     </div>
   );
 }
@@ -307,9 +306,8 @@ export function AppShell({
   const sidebarContent = (onNavigate?: () => void) => (
     <>
       <WorkspaceBox orgName={orgName} />
-      {/* Divider between org box and nav */}
-      <div className="mx-3 mb-1 border-t border-white/10" />
-      <div className="flex-1 overflow-y-auto scrollbar-thin mt-1">
+      <div className="mx-3 mt-2 mb-0 border-t border-white/[0.07]" />
+      <div className="flex-1 overflow-y-auto scrollbar-thin mt-2">
         {NAV_GROUPS.map((group, i) => (
           <SidebarNavGroup
             key={group.label ?? `g${i}`}
@@ -318,19 +316,19 @@ export function AppShell({
             onNavigate={onNavigate}
           />
         ))}
-        <div className="h-4" />
+        <div className="h-6" />
       </div>
-      <div className="border-t border-white/10 px-3 py-3">
+      <div className="border-t border-white/[0.07] px-3 py-3">
         <Link
           href="/settings/account"
           onClick={onNavigate}
-          className="flex items-center gap-2 text-[12px] text-sidebar-foreground/40 hover:text-sidebar-foreground/70 transition-colors"
+          className="flex items-center gap-2 text-[12px] text-white/35 hover:text-white/60 transition-colors"
         >
-          <HelpCircle className="size-3.5" />
+          <HelpCircle className="size-3.5 shrink-0" />
           Help &amp; Support
         </Link>
       </div>
-      <div className="border-t border-white/10 px-3 py-2.5">
+      <div className="border-t border-white/[0.07] px-3 py-2.5">
         <UserMenu email={email} fullName={fullName} role={role} logoutAction={logoutAction} sidebar />
       </div>
     </>
@@ -338,30 +336,40 @@ export function AppShell({
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
-      {/* Desktop sidebar */}
-      <aside className="hidden w-[220px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
-        <div className="flex h-[52px] shrink-0 items-center border-b border-white/10">
+      <aside
+        className="hidden w-[220px] shrink-0 flex-col md:flex"
+        style={{ background: "#111827", borderRight: "1px solid rgba(255,255,255,0.07)" }}
+      >
+        <div
+          className="flex h-[52px] shrink-0 items-center"
+          style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
+        >
           <Brand />
         </div>
         {sidebarContent()}
       </aside>
 
-      {/* Mobile overlay */}
       {mobileNavOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <button
             type="button"
             aria-label="Close navigation"
-            className="absolute inset-0 bg-black/70"
+            className="absolute inset-0 bg-black/60"
             onClick={() => setMobileNavOpen(false)}
           />
-          <aside className="relative flex h-full w-[220px] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-            <div className="flex h-[52px] shrink-0 items-center justify-between border-b border-white/10 pr-2">
+          <aside
+            className="relative flex h-full w-[220px] flex-col"
+            style={{ background: "#111827", borderRight: "1px solid rgba(255,255,255,0.07)" }}
+          >
+            <div
+              className="flex h-[52px] shrink-0 items-center justify-between pr-2"
+              style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
+            >
               <Brand />
               <button
                 type="button"
                 aria-label="Close"
-                className="flex size-8 items-center justify-center rounded-md text-sidebar-foreground/50 hover:bg-white/10"
+                className="flex size-8 items-center justify-center rounded-md text-white/40 hover:bg-white/10 hover:text-white/70"
                 onClick={() => setMobileNavOpen(false)}
               >
                 <X className="size-4" />
@@ -372,9 +380,7 @@ export function AppShell({
         </div>
       )}
 
-      {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {/* Top bar */}
         <header className="flex h-[52px] shrink-0 items-center gap-2 border-b border-border bg-surface px-4">
           <button
             type="button"
@@ -385,15 +391,20 @@ export function AppShell({
             <Menu className="size-4" />
           </button>
 
-          <SearchModal />{/* Search */}
+          <SearchModal />
           <div className="hidden flex-1 sm:flex sm:max-w-[480px]">
-            <div onClick={() => { const e = new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true }); document.dispatchEvent(e); }}
-              className="flex w-full items-center gap-2 rounded-md border border-border bg-elevated/40 px-3 py-1.5 text-[13px] text-muted-foreground hover:bg-elevated/60 cursor-text transition-colors">
-              <Search className="size-3.5 shrink-0 text-muted-foreground/40" />
-              <span className="flex-1 text-[12px] text-muted-foreground/40">
-                Search transactions, customers, invoices...
+            <div
+              onClick={() => {
+                const e = new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true });
+                document.dispatchEvent(e);
+              }}
+              className="flex w-full items-center gap-2 rounded-md border border-border bg-elevated/40 px-3 py-1.5 cursor-text transition-colors hover:bg-elevated/70"
+            >
+              <Search className="size-3.5 shrink-0 text-muted-foreground/50" />
+              <span className="flex-1 text-[12px] text-muted-foreground/50">
+                Search transactions, customers, invoices…
               </span>
-              <kbd className="rounded bg-elevated px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground/30">
+              <kbd className="rounded bg-border/60 px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground/40">
                 {"\u2318"}K
               </kbd>
             </div>
@@ -403,20 +414,21 @@ export function AppShell({
 
           <div className="flex items-center gap-1">
             <NotificationsPanel notifications={notifications} />
-            <div className="mx-1 h-5 w-px bg-border" />
+            <div className="mx-1.5 h-4 w-px bg-border" />
             <CurrencySelector value={displayCurrency} />
             <ThemeToggle />
-            <div className="mx-1 h-5 w-px bg-border" />
+            <div className="mx-1.5 h-4 w-px bg-border" />
             <UserMenu email={email} fullName={fullName} role={role} logoutAction={logoutAction} />
           </div>
         </header>
+
         <main className="flex flex-col flex-1 overflow-y-auto scrollbar-thin bg-background">
           {children}
-          <footer className="mt-auto border-t border-border px-6 py-3 text-center text-[11px] text-muted-foreground">
+          <footer className="mt-auto border-t border-border px-6 py-3 text-center text-[11px] text-muted-foreground/60">
             © 2026 Verity. All rights reserved.{" "}
-            <Link href="/terms" className="underline underline-offset-2 hover:text-foreground transition-colors">Terms</Link>
+            <Link href="/terms" className="underline-offset-2 hover:text-foreground hover:underline transition-colors">Terms</Link>
             {" · "}
-            <Link href="/privacy" className="underline underline-offset-2 hover:text-foreground transition-colors">Privacy</Link>
+            <Link href="/privacy" className="underline-offset-2 hover:text-foreground hover:underline transition-colors">Privacy</Link>
           </footer>
         </main>
       </div>

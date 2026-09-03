@@ -187,8 +187,8 @@ export default async function DashboardPage(props: { searchParams: Promise<Recor
                       className={cn(
                         "rounded px-2.5 py-1 text-[11px] font-medium transition-colors",
                         period === p
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-elevated"
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-border text-muted-foreground hover:text-foreground hover:bg-elevated"
                       )}
                     >
                       {p}M
@@ -360,3 +360,5 @@ export default async function DashboardPage(props: { searchParams: Promise<Recor
     </div>
   );
 }
+
+
