@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import type { ForecastHorizon } from "@/server/engines/forecast-engine";
 
 const HORIZONS: { value: ForecastHorizon; label: string }[] = [
-  { value: 7, label: "7D" },
+  { value: 7,  label: "7D"  },
   { value: 30, label: "30D" },
   { value: 60, label: "60D" },
   { value: 90, label: "90D" },
@@ -23,11 +23,8 @@ export function HorizonSelector({ current }: { current: ForecastHorizon }) {
   }
 
   return (
-    <div
-      role="group"
-      aria-label="Forecast horizon"
-      className="inline-flex rounded-md border border-border bg-secondary/50 p-0.5"
-    >
+    <div role="group" aria-label="Forecast horizon"
+      className="inline-flex rounded-md border border-border bg-elevated p-0.5 gap-0.5">
       {HORIZONS.map(({ value, label }) => (
         <button
           key={value}
@@ -35,10 +32,10 @@ export function HorizonSelector({ current }: { current: ForecastHorizon }) {
           onClick={() => select(value)}
           aria-pressed={current === value}
           className={cn(
-            "rounded px-3 py-1 text-xs font-medium transition-colors",
+            "rounded px-3 py-1 text-[11px] font-medium transition-colors",
             current === value
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground hover:bg-surface"
           )}
         >
           {label}

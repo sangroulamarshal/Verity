@@ -29,8 +29,8 @@ export function TransactionsTable({ transactions, canEdit, dateFormat }: Transac
   if (transactions.length === 0) {
     return (
       <div className="flex flex-col items-center gap-1 py-16 text-center">
-        <p className="text-sm font-medium">No transactions found</p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-[13px] font-medium">No transactions found</p>
+        <p className="text-[13px] text-muted-foreground">
           Try a different search or filter, or add a new transaction.
         </p>
       </div>

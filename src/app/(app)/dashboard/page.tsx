@@ -122,10 +122,10 @@ export default async function DashboardPage(props: { searchParams: Promise<Recor
     (riskSummary.counts.LOW ?? 0);
 
   const riskSegments = [
-    { value: riskSummary.counts.CRITICAL ?? 0, color: "#dc2626", label: "Critical" },
-    { value: riskSummary.counts.HIGH ?? 0,     color: "#ea580c", label: "High" },
-    { value: riskSummary.counts.MEDIUM ?? 0,   color: "#d97706", label: "Medium" },
-    { value: riskSummary.counts.LOW ?? 0,      color: "#16a34a", label: "Low" },
+    { value: riskSummary.counts.CRITICAL ?? 0, color: "var(--color-risk-critical)", label: "Critical" },
+    { value: riskSummary.counts.HIGH ?? 0,     color: "var(--color-risk-high)",     label: "High" },
+    { value: riskSummary.counts.MEDIUM ?? 0,   color: "var(--color-risk-medium)",   label: "Medium" },
+    { value: riskSummary.counts.LOW ?? 0,      color: "var(--color-risk-low)",      label: "Low" },
   ].filter((s) => s.value > 0);
 
   return (

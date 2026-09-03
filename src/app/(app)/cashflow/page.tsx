@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { AlertTriangle, TrendingUp, TrendingDown, Info } from "lucide-react";
@@ -106,7 +106,7 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
       {isInsufficient ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-2 py-16 text-center">
-            <p className="text-sm font-medium">Not enough data to generate a forecast</p>
+            <p className="text-[13px] font-medium">Not enough data to generate a forecast</p>
             <p className="max-w-sm text-sm text-muted-foreground">
               {forecast.confidenceReason}
             </p>
@@ -132,7 +132,7 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">
+                <CardTitle className="text-[12px] font-medium text-muted-foreground">
                   Current cash
                 </CardTitle>
               </CardHeader>
@@ -140,13 +140,13 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
                 <p className="text-xl font-semibold tabular-nums">
                   {formatCurrency(openingDisplay, currency)}
                 </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">Opening balance</p>
+                <p className="mt-0.5 text-[12px] text-muted-foreground">Opening balance</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">
+                <CardTitle className="text-[12px] font-medium text-muted-foreground">
                   {horizon}-day projected
                 </CardTitle>
               </CardHeader>
@@ -162,7 +162,7 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
                 {delta && (
                   <p
                     className={cn(
-                      "mt-0.5 flex items-center gap-0.5 text-xs font-medium",
+                      "mt-0.5 flex items-center gap-0.5 text-[12px] font-medium",
                       closingDisplay >= openingDisplay ? "text-income" : "text-expense"
                     )}
                   >
@@ -179,7 +179,7 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">
+                <CardTitle className="text-[12px] font-medium text-muted-foreground">
                   Expected income
                 </CardTitle>
               </CardHeader>
@@ -187,7 +187,7 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
                 <p className="text-xl font-semibold tabular-nums text-income">
                   +{formatCurrency(incomeDisplay, currency)}
                 </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
+                <p className="mt-0.5 text-[12px] text-muted-foreground">
                   {forecast.sources.invoiceIncome > 0 &&
                     `incl. ${formatCurrency(convert(forecast.sources.invoiceIncome), currency)} invoices`}
                 </p>
@@ -196,7 +196,7 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">
+                <CardTitle className="text-[12px] font-medium text-muted-foreground">
                   Expected expenses
                 </CardTitle>
               </CardHeader>
@@ -204,7 +204,7 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
                 <p className="text-xl font-semibold tabular-nums text-expense">
                   -{formatCurrency(expenseDisplay, currency)}
                 </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
+                <p className="mt-0.5 text-[12px] text-muted-foreground">
                   {forecast.sources.recurringExpenses > 0 &&
                     `incl. ${formatCurrency(convert(forecast.sources.recurringExpenses), currency)} recurring`}
                 </p>
@@ -215,11 +215,11 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
           {/* Confidence + data warning */}
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <ConfidenceBadge confidence={forecast.confidence} />
-            <p className="text-xs text-muted-foreground">{forecast.confidenceReason}</p>
+            <p className="text-[12px] text-muted-foreground">{forecast.confidenceReason}</p>
           </div>
 
           {forecast.dataWarning && (
-            <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-300">
+            <div className="mt-3 flex items-start gap-2 rounded-md border border-risk-medium/30 bg-risk-medium/8 px-3 py-2.5 text-[12px] text-risk-medium">
               <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
               {forecast.dataWarning}
             </div>
@@ -229,7 +229,7 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
           <Card className="mt-4">
             <CardHeader>
               <CardTitle>Cash position</CardTitle>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[12px] text-muted-foreground">
                 Projected balance over the next {horizon} days
               </p>
             </CardHeader>
@@ -252,20 +252,20 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
                     insight.severity === "CRITICAL"
                       ? "border-destructive/40 bg-destructive/5 text-foreground"
                       : insight.severity === "WARNING"
-                        ? "border-amber-200 bg-amber-50/50 text-foreground dark:border-amber-900/40 dark:bg-amber-900/10"
+                        ? "border-risk-medium/30 bg-risk-medium/5 text-foreground"
                         : "border-border bg-secondary/30 text-foreground"
                   )}
                 >
                   {insight.severity === "CRITICAL" ? (
                     <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
                   ) : insight.severity === "WARNING" ? (
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-risk-medium" />
                   ) : (
                     <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                   )}
                   <div>
                     <p className="font-medium">{insight.title}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{insight.detail}</p>
+                    <p className="mt-0.5 text-[12px] text-muted-foreground">{insight.detail}</p>
                   </div>
                 </div>
               ))}
@@ -296,7 +296,7 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
                         >
                           <div className="min-w-0">
                             <p className="truncate font-medium">{item.label}</p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-[12px] text-muted-foreground">
                               {formatDate(item.date)}
                               <span className="ml-2 capitalize text-muted-foreground/70">
                                 {item.source === "INVOICE"
@@ -339,7 +339,7 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
                         >
                           <div className="min-w-0">
                             <p className="truncate font-medium">{item.label}</p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-[12px] text-muted-foreground">
                               {formatDate(item.date)}
                               <span className="ml-2 capitalize text-muted-foreground/70">
                                 {item.source === "PRESET" ? "recurring" : "pattern"}
@@ -420,7 +420,7 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
             <Card className="mt-4">
               <CardHeader>
                 <CardTitle>Scenarios</CardTitle>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[12px] text-muted-foreground">
                   Simple what-if adjustments to the base forecast.
                 </p>
               </CardHeader>
@@ -456,7 +456,7 @@ export default async function CashFlowPage(props: { searchParams: Promise<Record
           <Card className="mt-4">
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle>Day-by-day breakdown</CardTitle>
-              <span className="text-xs text-muted-foreground">All amounts in {currency}</span>
+              <span className="text-[12px] text-muted-foreground">All amounts in {currency}</span>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">

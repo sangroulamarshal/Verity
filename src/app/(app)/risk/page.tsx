@@ -62,11 +62,13 @@ export default async function RiskPage(props: PageProps<"/risk">) {
     (summary.counts.MEDIUM ?? 0) +
     (summary.counts.LOW ?? 0);
 
+  // Use explicit colors that work in both light and dark
+  // These match --risk-* tokens for dark mode and are strong enough for light mode
   const riskSegments = [
-    { value: summary.counts.CRITICAL ?? 0, color: "#dc2626", label: "Critical" },
-    { value: summary.counts.HIGH ?? 0,     color: "#ea580c", label: "High" },
-    { value: summary.counts.MEDIUM ?? 0,   color: "#d97706", label: "Medium" },
-    { value: summary.counts.LOW ?? 0,      color: "#16a34a", label: "Low" },
+    { value: summary.counts.CRITICAL ?? 0, color: "var(--color-risk-critical)", label: "Critical" },
+    { value: summary.counts.HIGH ?? 0,     color: "var(--color-risk-high)",     label: "High" },
+    { value: summary.counts.MEDIUM ?? 0,   color: "var(--color-risk-medium)",   label: "Medium" },
+    { value: summary.counts.LOW ?? 0,      color: "var(--color-risk-low)",      label: "Low" },
   ].filter((s) => s.value > 0);
 
   return (
@@ -150,7 +152,7 @@ export default async function RiskPage(props: PageProps<"/risk">) {
                   </button>
                 </div>
               </CardHeader>
-              <CardContent className="pt-2">
+              <CardContent className="pt-0">
                 <RiskDonutChart total={riskTotal} segments={riskSegments} compact />
               </CardContent>
             </Card>

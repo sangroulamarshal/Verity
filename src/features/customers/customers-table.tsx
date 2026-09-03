@@ -20,8 +20,8 @@ export function CustomersTable({ customers, canEdit }: CustomersTableProps) {
   if (customers.length === 0) {
     return (
       <div className="flex flex-col items-center gap-1 py-16 text-center">
-        <p className="text-sm font-medium">No customers found</p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-[13px] font-medium">No customers found</p>
+        <p className="text-[13px] text-muted-foreground">
           Try a different search, or add a new customer.
         </p>
       </div>

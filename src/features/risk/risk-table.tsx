@@ -21,8 +21,8 @@ export function RiskTable({ rows }: { rows: RiskTransactionRow[] }) {
   if (rows.length === 0) {
     return (
       <div className="flex flex-col items-center gap-1 py-16 text-center">
-        <p className="text-sm font-medium">No flagged transactions</p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-[13px] font-medium">No flagged transactions</p>
+        <p className="text-[13px] text-muted-foreground">
           Nothing matches the current filters, or nothing has been flagged yet.
         </p>
       </div>
