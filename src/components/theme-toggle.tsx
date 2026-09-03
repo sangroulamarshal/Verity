@@ -10,8 +10,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAccountTheme } from "@/components/use-account-theme";
 
+const OPTIONS = [
+  { value: "light",  label: "Light",  Icon: Sun },
+  { value: "dark",   label: "Dark",   Icon: Moon },
+  { value: "system", label: "System", Icon: Monitor },
+] as const;
+
 export function ThemeToggle() {
-  const { setTheme } = useAccountTheme();
+  const { theme, setTheme } = useAccountTheme();
 
   return (
     <DropdownMenu>
@@ -27,15 +33,20 @@ export function ThemeToggle() {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
-          <Sun className="mr-2 size-4" /> Light
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
-          <Moon className="mr-2 size-4" /> Dark
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
-          <Monitor className="mr-2 size-4" /> System
-        </DropdownMenuItem>
+        {OPTIONS.map(({ value, label, Icon }) => {
+          const active = theme === value;
+          return (
+            <DropdownMenuItem
+              key={value}
+              onClick={() => setTheme(value)}
+              className={active ? "text-primary font-medium" : ""}
+            >
+              <Icon className="mr-2 size-4" />
+              {label}
+              {active && <span className="ml-auto pl-4 text-primary">✓</span>}
+            </DropdownMenuItem>
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -11,8 +11,31 @@ import { CustomerDialog } from "@/features/customers/customer-dialog";
 import { CustomerSearch } from "@/features/customers/customer-search";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import type { RiskLevel } from "@/server/engines/risk-engine";
 
 export const metadata: Metadata = { title: "Customers" };
+
+const RISK_LEVELS: { value: RiskLevel | ""; label: string }[] = [
+  { value: "",         label: "All risk levels" },
+  { value: "CRITICAL", label: "Critical" },
+  { value: "HIGH",     label: "High" },
+  { value: "MEDIUM",   label: "Medium" },
+  { value: "LOW",      label: "Low" },
+];
+
+const RISK_BADGE_VARIANT: Record<RiskLevel, "risk-critical" | "risk-high" | "risk-medium" | "risk-low"> = {
+  CRITICAL: "risk-critical",
+  HIGH:     "risk-high",
+  MEDIUM:   "risk-medium",
+  LOW:      "risk-low",
+};
+
+const RISK_BADGE_LABEL: Record<RiskLevel, string> = {
+  CRITICAL: "Critical",
+  HIGH:     "High",
+  MEDIUM:   "Medium",
+  LOW:      "Low",
+};
 
 function firstParam(v: string | string[] | undefined) {
   return Array.isArray(v) ? v[0] : v;
@@ -25,15 +48,30 @@ export default async function CustomersPage(props: PageProps<"/customers">) {
   const search = firstParam(sp.search);
   const sortBy = (firstParam(sp.sortBy) ?? "name") as "name" | "updatedAt";
   const sortDir = (firstParam(sp.sortDir) ?? "asc") as "asc" | "desc";
+  const riskParam = firstParam(sp.risk) as RiskLevel | "" | undefined;
+  const riskLevel = (riskParam && ["CRITICAL", "HIGH", "MEDIUM", "LOW"].includes(riskParam))
+    ? riskParam as RiskLevel
+    : undefined;
   const canEdit = canWriteCustomers(session.role);
 
   const { rows, total, totalPages } = await listCustomers(session.organizationId, {
-    page, search, sortBy, sortDir,
+    page, search, sortBy, sortDir, riskLevel,
   });
+
+  const filterHref = (level: RiskLevel | "") => {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (sortBy !== "name") params.set("sortBy", sortBy);
+    if (sortDir !== "asc") params.set("sortDir", sortDir);
+    if (level) params.set("risk", level);
+    const qs = params.toString();
+    return `/customers${qs ? `?${qs}` : ""}`;
+  };
 
   const sortHref = (col: "name" | "updatedAt") => {
     const params = new URLSearchParams();
     if (search) params.set("search", search);
+    if (riskLevel) params.set("risk", riskLevel);
     params.set("sortBy", col);
     params.set("sortDir", sortBy === col && sortDir === "asc" ? "desc" : "asc");
     return `/customers?${params}`;
@@ -43,6 +81,7 @@ export default async function CustomersPage(props: PageProps<"/customers">) {
     const params = new URLSearchParams();
     params.set("page", String(p));
     if (search) params.set("search", search);
+    if (riskLevel) params.set("risk", riskLevel);
     if (sortBy !== "name") params.set("sortBy", sortBy);
     if (sortDir !== "asc") params.set("sortDir", sortDir);
     return `/customers?${params}`;
@@ -54,6 +93,8 @@ export default async function CustomersPage(props: PageProps<"/customers">) {
       ? <ChevronUp className="inline size-3 ml-0.5 opacity-60" />
       : <ChevronDown className="inline size-3 ml-0.5 opacity-60" />;
   }
+
+  const activeRiskLabel = RISK_LEVELS.find((r) => r.value === (riskLevel ?? ""))?.label ?? "All risk levels";
 
   return (
     <div className="w-full px-4 py-4 sm:px-6">
@@ -81,7 +122,33 @@ export default async function CustomersPage(props: PageProps<"/customers">) {
         <div className="w-64">
           <CustomerSearch />
         </div>
-        <Button variant="outline" size="sm">Risk Level: All</Button>
+        {/* Risk level filter — server-side via URL param */}
+        <div className="relative">
+          <select
+            defaultValue={riskLevel ?? ""}
+            onChange={(e) => {
+              // Client navigation — form submission would need a client
+              // component; a plain anchor list avoids that dependency.
+            }}
+            className="hidden"
+          />
+          <div className="flex items-center gap-0.5 rounded-md border border-border bg-surface">
+            {RISK_LEVELS.map(({ value, label }) => (
+              <Link
+                key={value}
+                href={filterHref(value)}
+                className={cn(
+                  "px-3 py-1.5 text-[12px] transition-colors rounded-md",
+                  (riskLevel ?? "") === value
+                    ? "bg-primary text-primary-foreground font-medium"
+                    : "text-muted-foreground hover:text-foreground hover:bg-elevated"
+                )}
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Table */}
@@ -110,7 +177,11 @@ export default async function CustomersPage(props: PageProps<"/customers">) {
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-5 py-16 text-center text-[13px] text-muted-foreground">
-                  {search ? "No customers match that search." : "No customers yet. Add your first customer to get started."}
+                  {riskLevel
+                    ? `No customers with ${RISK_BADGE_LABEL[riskLevel]} risk.`
+                    : search
+                    ? "No customers match that search."
+                    : "No customers yet. Add your first customer to get started."}
                 </td>
               </tr>
             ) : (
@@ -143,7 +214,15 @@ export default async function CustomersPage(props: PageProps<"/customers">) {
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">--</td>
                   <td className="px-4 py-3">
-                    <Badge variant="risk-low">Low</Badge>
+                    {customer.topRiskLevel ? (
+                      <Link href={filterHref(customer.topRiskLevel)}>
+                        <Badge variant={RISK_BADGE_VARIANT[customer.topRiskLevel]}>
+                          {RISK_BADGE_LABEL[customer.topRiskLevel]}
+                        </Badge>
+                      </Link>
+                    ) : (
+                      <span className="text-[12px] text-muted-foreground/40">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-[12px] text-muted-foreground">
                     {customer.updatedAt
@@ -171,6 +250,7 @@ export default async function CustomersPage(props: PageProps<"/customers">) {
         <div className="flex items-center justify-between border-t border-border px-5 py-2.5">
           <span className="text-[12px] text-muted-foreground">
             Showing {rows.length > 0 ? (page - 1) * 20 + 1 : 0} to {Math.min(page * 20, total)} of {total} customers
+            {riskLevel && <span className="ml-1 text-muted-foreground/60">· filtered by {activeRiskLabel}</span>}
           </span>
           {totalPages > 1 && (
             <div className="flex items-center gap-1">

@@ -15,9 +15,12 @@ function monthLabel(month: string) {
 }
 
 function formatK(value: number) {
-  if (Math.abs(value) >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-  if (Math.abs(value) >= 1_000) return `${(value / 1_000).toFixed(0)}K`;
-  return String(value);
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (abs >= 10_000) return `${(value / 1_000).toFixed(0)}K`;
+  if (abs >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  if (abs === 0) return "0";
+  return abs < 1 ? value.toFixed(2) : Math.round(value).toString();
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -50,8 +53,8 @@ export function CashFlowChart({ data }: CashFlowChartProps) {
 
   const chartData = data.map((d) => ({
     month: monthLabel(d.month),
-    Income: d.income,
-    Expenses: d.expense,
+    Income: typeof d.income === "string" ? parseFloat(d.income) : d.income,
+    Expenses: typeof d.expense === "string" ? parseFloat(d.expense) : d.expense,
   }));
 
   return (

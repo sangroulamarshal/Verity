@@ -83,7 +83,7 @@ export function SearchModal() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] px-4"
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
       style={{ background: "rgba(0,0,0,0.5)" }}
       onMouseDown={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
     >

@@ -17,7 +17,6 @@ import {
   ClipboardList,
   ShieldAlert,
   TrendingUp,
-
   Lightbulb,
   BarChart,
   Settings as SettingsIcon,
@@ -25,7 +24,6 @@ import {
   X,
   ChevronDown,
   Search,
-
   HelpCircle,
   Tag,
 } from "lucide-react";
@@ -263,26 +261,12 @@ function Brand() {
 
 function WorkspaceBox({ orgName }: { orgName: string }) {
   return (
-    <div className="mx-3 mt-3 flex cursor-pointer items-center justify-between rounded-md border border-border bg-elevated/60 px-2.5 py-2 hover:bg-elevated transition-colors">
+    <div className="mx-3 mt-3 rounded-md border border-border bg-elevated/60 px-2.5 py-2">
       <p className="truncate text-[12px] font-medium text-foreground/90">{orgName}</p>
-      <ChevronDown className="ml-2 size-3 shrink-0 text-muted-foreground/60" />
     </div>
   );
 }
 
-function SidebarSearch() {
-  return (
-    <div className="mx-3 mt-2.5">
-      <div className="flex items-center gap-2 rounded-md border border-border bg-elevated/30 px-2.5 py-1.5 cursor-text hover:bg-elevated/50 transition-colors">
-        <Search className="size-3.5 shrink-0 text-muted-foreground/40" />
-        <span className="flex-1 text-[12px] text-muted-foreground/40">Find</span>
-        <kbd className="rounded bg-elevated px-1 py-0.5 text-[9px] font-mono text-muted-foreground/30">
-          {"\u2318"}K
-        </kbd>
-      </div>
-    </div>
-  );
-}
 
 interface AppShellProps {
   notifications?: NotificationItem[];
@@ -323,7 +307,6 @@ export function AppShell({
   const sidebarContent = (onNavigate?: () => void) => (
     <>
       <WorkspaceBox orgName={orgName} />
-      <div onClick={() => setSearchOpen(true)} className="cursor-pointer"><SidebarSearch /></div>
       <div className="flex-1 overflow-y-auto scrollbar-thin mt-1">
         {NAV_GROUPS.map((group, i) => (
           <SidebarNavGroup

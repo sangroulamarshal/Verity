@@ -2,6 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { customers, transactions } from "@/db/schema";
+import type { RiskLevel } from "@/server/engines/risk-engine";
 
 export type Customer = typeof customers.$inferSelect;
 
@@ -19,10 +20,18 @@ export interface ListCustomersOptions {
   search?: string;
   sortBy?: "name" | "updatedAt";
   sortDir?: "asc" | "desc";
+  /** Filter by the customer's highest transaction risk level. */
+  riskLevel?: RiskLevel;
+}
+
+export interface CustomerRow extends Customer {
+  /** Highest risk level across all of this customer's evaluated transactions.
+   *  Null when no transactions have been risk-scored yet. */
+  topRiskLevel: RiskLevel | null;
 }
 
 export interface ListCustomersResult {
-  rows: Customer[];
+  rows: CustomerRow[];
   total: number;
   page: number;
   pageSize: number;
@@ -37,6 +46,17 @@ const DEFAULT_PAGE_SIZE = 20;
  * pattern as server/services/transactions.ts and every other org-owned
  * table. See docs/ARCHITECTURE.md.
  */
+
+// Risk level ordering — used to find the highest level per customer.
+// Postgres CASE expression mirrors the LEVEL_ORDER array in risk-engine.ts.
+const RISK_LEVEL_ORDER = sql<number>`
+  case ${transactions.riskLevel}
+    when 'CRITICAL' then 4
+    when 'HIGH'     then 3
+    when 'MEDIUM'   then 2
+    when 'LOW'      then 1
+    else 0
+  end`;
 
 export async function listCustomers(
   organizationId: string,
@@ -55,23 +75,77 @@ export async function listCustomers(
     );
   }
 
+  // Subquery: highest risk level for each customer, from their evaluated transactions.
+  // Uses the same org-scoping pattern as every other query here — organizationId
+  // on transactions is checked even though customerId already implies it, because
+  // relying on a single FK condition alone is weaker than explicit org scoping
+  // (see ARCHITECTURE.md).
+  const riskSubq = db
+    .select({
+      customerId: transactions.customerId,
+      topRiskLevel: sql<RiskLevel | null>`
+        case max(${RISK_LEVEL_ORDER})
+          when 4 then 'CRITICAL'
+          when 3 then 'HIGH'
+          when 2 then 'MEDIUM'
+          when 1 then 'LOW'
+          else null
+        end`.as("top_risk_level"),
+    })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.organizationId, organizationId),
+        sql`${transactions.customerId} is not null`,
+        sql`${transactions.riskLevel} is not null`
+      )
+    )
+    .groupBy(transactions.customerId)
+    .as("risk_summary");
+
+  // When a riskLevel filter is set, restrict customers whose topRiskLevel
+  // matches. This is done via a HAVING-equivalent — the subquery already
+  // groups by customerId, so we filter the join result in the outer WHERE.
+  const riskFilterCondition = options.riskLevel
+    ? sql`${riskSubq.topRiskLevel} = ${options.riskLevel}`
+    : undefined;
+
   const where = and(...conditions);
 
   const [rows, totalRows] = await Promise.all([
     db
-      .select()
+      .select({
+        id: customers.id,
+        organizationId: customers.organizationId,
+        name: customers.name,
+        email: customers.email,
+        phone: customers.phone,
+        notes: customers.notes,
+        createdAt: customers.createdAt,
+        updatedAt: customers.updatedAt,
+        topRiskLevel: riskSubq.topRiskLevel,
+      })
       .from(customers)
-      .where(where)
-      .orderBy(options.sortBy === "updatedAt" ? (options.sortDir === "desc" ? desc(customers.updatedAt) : asc(customers.updatedAt)) : (options.sortDir === "desc" ? desc(customers.name) : asc(customers.name)))
+      .leftJoin(riskSubq, eq(customers.id, riskSubq.customerId))
+      .where(riskFilterCondition ? and(where, riskFilterCondition) : where)
+      .orderBy(
+        options.sortBy === "updatedAt"
+          ? options.sortDir === "desc" ? desc(customers.updatedAt) : asc(customers.updatedAt)
+          : options.sortDir === "desc" ? desc(customers.name) : asc(customers.name)
+      )
       .limit(pageSize)
       .offset(offset),
-    db.select({ value: sql<number>`count(*)` }).from(customers).where(where),
+    db
+      .select({ value: sql<number>`count(*)` })
+      .from(customers)
+      .leftJoin(riskSubq, eq(customers.id, riskSubq.customerId))
+      .where(riskFilterCondition ? and(where, riskFilterCondition) : where),
   ]);
 
   const total = Number(totalRows[0]?.value ?? 0);
 
   return {
-    rows,
+    rows: rows as CustomerRow[],
     total,
     page,
     pageSize,

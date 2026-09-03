@@ -60,8 +60,14 @@ export function ForecastChart({ days, openingBalance, historicalDays = [] }: For
   const hasNegative = Math.min(...allBalances) < 0;
   const minBal = Math.min(...allBalances);
   const maxBal = Math.max(...allBalances);
-  const padding = Math.max((maxBal - minBal) * 0.1, maxBal * 0.02);
-  const yMin = hasNegative ? minBal - padding : Math.max(0, minBal - padding);
+  const range = maxBal - minBal;
+  // Padding: 10% of the visible range, minimum 2% of maxBal, so the chart
+  // never starts exactly at the line. For positive-only data the floor is
+  // 85% of minBal so the line doesn't drop to the X axis.
+  const padding = Math.max(range * 0.1, maxBal * 0.02);
+  const yMin = hasNegative
+    ? minBal - padding
+    : Math.max(0, minBal - Math.max(padding, minBal * 0.15));
   const yMax = maxBal + padding;
 
   return (
