@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Button } from "@/components/ui/button";
 import { Moon, Sun, Monitor, ChevronDown } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAccountTheme } from "@/components/use-account-theme";
+import { Button } from "@/components/ui/button";
+
 
 const OPTIONS = [
   { value: "light",  label: "Light",  Icon: Sun },
@@ -17,7 +18,7 @@ export function ThemeToggle() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="outline" size="sm" aria-label="Toggle theme" className="gap-1 px-2.5 font-medium tabular-nums" >
+        <Button type="button" variant="outline" size="sm" aria-label="Toggle theme" className="flex h-8 items-center gap-0.5 rounded-md px-2 text-muted-foreground hover:bg-elevated hover:text-foreground transition-colors">
           <Sun className="size-[15px] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
           <Moon className="absolute size-[15px] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
           <ChevronDown className="size-3 opacity-50 mt-px ml-2" />
